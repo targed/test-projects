@@ -1,0 +1,6 @@
+5
+123
+LOOP
+"test"
+A1X
+invalid!
