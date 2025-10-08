@@ -1,0 +1,19 @@
+18
+1: Integer
+2: Decimal
+3: Keyword
+4: Hexadecimal
+5: Scientific
+6: Phone
+7: Identifier
+8: INVALID!
+9: INVALID!
+10: Integer
+11: Character
+12: Identifier
+13: String
+14: Phone
+15: INVALID!
+16: Aircraft
+17: INVALID!
+18: INVALID!
