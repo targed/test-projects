@@ -305,36 +305,39 @@ document.addEventListener('DOMContentLoaded', () => {
             coords.forEach(p => map[p.r][p.c] = 1);
             const visited = new Set();
 
-            coords.forEach(p => {
-                const key = `${p.r},${p.c}`;
-                if (visited.has(key)) return;
+            // We need to find the largest possible rectangles to represent the group visually
+            // A group might be split across edges, so we find contiguous blocks
+            
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    if (map[r][c] && !visited.has(`${r},${c}`)) {
+                        // Found a new block, expand it
+                        let w = 1;
+                        while (c + w < cols && map[r][c + w] && !visited.has(`${r},${c + w}`)) w++;
 
-                // Expand Right
-                let w = 1;
-                while (p.c + w < cols && map[p.r][p.c + w]) w++;
+                        let h = 1;
+                        let valid = true;
+                        while (r + h < rows) {
+                            for (let k = 0; k < w; k++) {
+                                if (!map[r + h][c + k] || visited.has(`${r + h},${c + k}`)) {
+                                    valid = false;
+                                    break;
+                                }
+                            }
+                            if (!valid) break;
+                            h++;
+                        }
 
-                // Expand Down
-                let h = 1;
-                let valid = true;
-                while (p.r + h < rows) {
-                    for (let k = 0; k < w; k++) {
-                        if (!map[p.r + h][p.c + k]) {
-                            valid = false;
-                            break;
+                        rectangles.push({r, c, w, h});
+
+                        for(let i=0; i<h; i++) {
+                            for(let j=0; j<w; j++) {
+                                visited.add(`${r + i},${c + j}`);
+                            }
                         }
                     }
-                    if (!valid) break;
-                    h++;
                 }
-
-                rectangles.push({r: p.r, c: p.c, w, h});
-
-                for(let i=0; i<h; i++) {
-                    for(let j=0; j<w; j++) {
-                        visited.add(`${p.r + i},${p.c + j}`);
-                    }
-                }
-            });
+            }
             console.log(`Group ${gIndex} Rectangles:`, rectangles);
 
             // 2. Determine if the group wraps
@@ -343,32 +346,50 @@ document.addEventListener('DOMContentLoaded', () => {
             const hasTop = coords.some(p => p.r === 0);
             const hasBottom = coords.some(p => p.r === rows - 1);
 
-            const isWrapping = rectangles.length > 1; // Basic heuristic: if it split, it wrapped.
-            console.log(`Group ${gIndex} isWrapping:`, isWrapping);
+            // A group wraps if it has cells on BOTH opposite edges AND it's split into multiple rectangles
+            // We need to be careful: a group might span the entire width/height and NOT be split.
+            // If it spans the entire width/height, it's just one big rectangle and shouldn't have open edges.
+            
+            // Check if the group actually wraps around the edges (is split across the boundary)
+            // A group wraps horizontally if it has cells on left and right, AND it doesn't cover the whole width continuously
+            const coversFullWidth = rectangles.some(r => r.w === cols);
+            const wrapsHorizontally = hasLeft && hasRight && !coversFullWidth;
+            
+            // A group wraps vertically if it has cells on top and bottom, AND it doesn't cover the whole height continuously
+            const coversFullHeight = rectangles.some(r => r.h === rows);
+            const wrapsVertically = hasTop && hasBottom && !coversFullHeight;
+            
+            console.log(`Group ${gIndex} wraps H:${wrapsHorizontally} V:${wrapsVertically}`);
 
             rectangles.forEach(rect => {
                 const sides = [true, true, true, true]; // Top, Right, Bottom, Left
 
-                if (isWrapping) {
-                    // Check Left wrapping
-                    if (rect.c === 0 && hasRight) {
-                        sides[3] = false; // Open Left
-                    }
+                // Check Left wrapping: open left if group wraps horizontally AND this rect is at left edge
+                if (wrapsHorizontally && rect.c === 0) {
+                    sides[3] = false; // Open Left
+                }
 
-                    // Check Right wrapping
-                    if (rect.c + rect.w === cols && hasLeft) {
-                        sides[1] = false; // Open Right
-                    }
+                // Check Right wrapping: open right if group wraps horizontally AND this rect is at right edge
+                if (wrapsHorizontally && rect.c + rect.w === cols) {
+                    sides[1] = false; // Open Right
+                }
 
-                    // Check Top wrapping
-                    if (rect.r === 0 && hasBottom) {
-                        sides[0] = false; // Open Top
-                    }
+                // Check Top wrapping: open top if group wraps vertically AND this rect is at top edge
+                if (wrapsVertically && rect.r === 0) {
+                    sides[0] = false; // Open Top
+                }
 
-                    // Check Bottom wrapping
-                    if (rect.r + rect.h === rows && hasTop) {
-                        sides[2] = false; // Open Bottom
-                    }
+                // Check Bottom wrapping: open bottom if group wraps vertically AND this rect is at bottom edge
+                if (wrapsVertically && rect.r + rect.h === rows) {
+                    sides[2] = false; // Open Bottom
+                }
+
+                // Special case for 4 corners wrapping
+                if (hasLeft && hasRight && hasTop && hasBottom && rectangles.length === 4) {
+                    if (rect.r === 0 && rect.c === 0) { sides[0] = false; sides[3] = false; } // Top-Left
+                    if (rect.r === 0 && rect.c + rect.w === cols) { sides[0] = false; sides[1] = false; } // Top-Right
+                    if (rect.r + rect.h === rows && rect.c === 0) { sides[2] = false; sides[3] = false; } // Bottom-Left
+                    if (rect.r + rect.h === rows && rect.c + rect.w === cols) { sides[2] = false; sides[1] = false; } // Bottom-Right
                 }
 
                 drawRect(rect, color, sides);
