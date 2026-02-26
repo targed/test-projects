@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K-Map Solver</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>K-Map Solver</h1>
+
+        <div class="controls">
+            <label for="var-count">Variables:</label>
+            <select id="var-count">
+                <option value="2">2 Variables (A, B)</option>
+                <option value="3">3 Variables (A, B, C)</option>
+                <option value="4" selected>4 Variables (A, B, C, D)</option>
+                <option value="5">5 Variables (A, B, C, D, E)</option>
+            </select>
+
+            <label for="solve-mode">Mode:</label>
+            <select id="solve-mode">
+                <option value="SOP">Sum of Products (SOP)</option>
+                <option value="POS">Product of Sums (POS)</option>
+            </select>
+
+            <button id="reset-btn">Reset</button>
+            <button id="toggle-indices">Toggle Indices</button>
+            <button id="toggle-truth-table">Toggle Truth Table</button>
+        </div>
+
+        <div id="solution-output" class="output-area">
+            <h3>Solution:</h3>
+            <div id="equation-display"></div>
+        </div>
+
+        <div class="main-content">
+            <div class="kmap-container">
+                <div id="kmap-grid" class="kmap-grid">
+                    <!-- K-Map will be generated here -->
+                </div>
+                <svg id="kmap-overlay" class="kmap-overlay"></svg>
+            </div>
+
+            <div id="truth-table-container" class="hidden">
+                <h3>Truth Table</h3>
+                <div id="truth-table">
+                    <!-- Truth table will be generated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="solver.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
