@@ -234,16 +234,6 @@ document.addEventListener('DOMContentLoaded', () => {
              span.innerText = result.equation;
              equationDisplay.appendChild(span);
         } else {
-            // result.groups corresponds to terms in result.equation parts?
-            // formatEquation logic in solver.js:
-            // if SOP: join ' + '
-            // if POS: join ')(', wrap in ()
-
-            // We need to match groups to equation parts.
-            // The solver returns 'groups' array.
-            // formatEquation iterates over this array to produce the string.
-            // So index i in groups corresponds to index i in the formatted parts.
-
             result.groups.forEach((group, index) => {
                 const termStr = solver.getTermString(group);
                 const color = colors[index % colors.length];
@@ -290,25 +280,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         groups.forEach((group, gIndex) => {
             const color = colors[gIndex % colors.length];
-            // Get cells covered by this group
-            // We need to map minterms back to (row, col)
             const minterms = group.getCoveredMinterms();
-
-            // We need to find the bounding box(es) for these minterms.
-            // Because of wrapping, a group might be split into multiple visual rectangles.
 
             // Map minterms to (row, col) coordinates
             const coords = minterms.map(m => {
-                 // Inverse of index calculation
-                 // index = (rowBits << colVarsCount) | colBits
-                 // We need to match rowBits to row index, colBits to col index.
-
                  const rowBits = m >> colVarsCount;
                  const colBits = m & ((1 << colVarsCount) - 1);
 
-                 // Find index in Gray Code arrays
-                 // Gray Code arrays are defined in init scope... wait, need to access them.
-                 // Let's move grayCodes out or recreate them.
                  const rowGrayArr = grayCodes[rowVarsCount];
                  const colGrayArr = grayCodes[colVarsCount];
 
@@ -318,52 +296,16 @@ document.addEventListener('DOMContentLoaded', () => {
                  return {r, c};
             });
 
-            // Group adjacent coordinates (handling wrapping) to form rectangles
-            // A simple way to draw K-map groups is to draw a rect for each connected component.
-            // Since K-map groups are always powers of 2 rectangles (possibly wrapped).
-
-            // Identify connected sub-groups on the 2D grid.
-            // A group can be:
-            // 1. A single rectangle.
-            // 2. Wrapped horizontally (left & right edges).
-            // 3. Wrapped vertically (top & bottom edges).
-            // 4. Wrapped corners (4 corners).
-
-            // Strategy:
-            // 1. Detect if it wraps horizontally: check if min min-col and max max-col are at edges (0 and cols-1) AND there is a gap in between?
-            // Better: Iterate through the grid and find clusters.
-
-            // Let's classify the shape.
-            const minR = Math.min(...coords.map(p => p.r));
-            const maxR = Math.max(...coords.map(p => p.r));
-            const minC = Math.min(...coords.map(p => p.c));
-            const maxC = Math.max(...coords.map(p => p.c));
-
-            // Check for wrapping
-            const wrapsRow = (maxR - minR + 1) !== new Set(coords.map(p => p.r)).size; // Simple heuristic? No.
-            // If we have indices 0 and 3 in a 4-row grid, and not 1 and 2, it wraps.
-
-            // Let's create a 2D map of the group
+            // 1. Identify Rectangles (visual parts)
+            const rectangles = [];
             const map = Array(rows).fill(0).map(() => Array(cols).fill(0));
             coords.forEach(p => map[p.r][p.c] = 1);
-
-            // Identify rectangles
-            // A group in K-Map is essentially one logical rectangle on the torus.
-            // Visually it splits.
-
-            const rectangles = [];
-
-            // Naive approach: Find a '1', expand rectangle as much as possible, mark visited, repeat.
-            // Since we know the structure of Prime Implicants, they are always rectangular blocks (on torus).
-            // If we split the torus, we get at most 4 rectangles (corners).
-
             const visited = new Set();
 
             coords.forEach(p => {
                 const key = `${p.r},${p.c}`;
                 if (visited.has(key)) return;
 
-                // Start a new rectangle here
                 // Expand Right
                 let w = 1;
                 while (p.c + w < cols && map[p.r][p.c + w]) w++;
@@ -372,7 +314,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 let h = 1;
                 let valid = true;
                 while (p.r + h < rows) {
-                    // Check if whole row segment matches
                     for (let k = 0; k < w; k++) {
                         if (!map[p.r + h][p.c + k]) {
                             valid = false;
@@ -383,10 +324,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     h++;
                 }
 
-                // Add rectangle
                 rectangles.push({r: p.r, c: p.c, w, h});
 
-                // Mark covered as visited
                 for(let i=0; i<h; i++) {
                     for(let j=0; j<w; j++) {
                         visited.add(`${p.r + i},${p.c + j}`);
@@ -394,31 +333,164 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // Draw rectangles
+            // 2. Determine if the group wraps
+            const hasLeft = coords.some(p => p.c === 0);
+            const hasRight = coords.some(p => p.c === cols - 1);
+            const hasTop = coords.some(p => p.r === 0);
+            const hasBottom = coords.some(p => p.r === rows - 1);
+
+            const isWrapping = rectangles.length > 1; // Basic heuristic: if it split, it wrapped.
+
             rectangles.forEach(rect => {
-                const svgRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                // Cell size is 60px.
-                // Add some padding/margin to make it look like a circle/rounded rect
-                const padding = 5;
-                const x = rect.c * 60 + padding;
-                const y = rect.r * 60 + padding;
-                const width = rect.w * 60 - 2 * padding;
-                const height = rect.h * 60 - 2 * padding;
+                const sides = [true, true, true, true]; // Top, Right, Bottom, Left
 
-                svgRect.setAttribute("x", x);
-                svgRect.setAttribute("y", y);
-                svgRect.setAttribute("width", width);
-                svgRect.setAttribute("height", height);
-                svgRect.setAttribute("rx", 20); // Rounded corners
-                svgRect.setAttribute("ry", 20);
-                svgRect.setAttribute("fill", "none");
-                svgRect.setAttribute("stroke", color);
-                svgRect.setAttribute("stroke-width", "4");
-                svgRect.setAttribute("stroke-opacity", "0.8");
+                if (isWrapping) {
+                    // Check Left wrapping
+                    if (rect.c === 0 && hasRight) {
+                        sides[3] = false; // Open Left
+                    }
 
-                kmapOverlay.appendChild(svgRect);
+                    // Check Right wrapping
+                    if (rect.c + rect.w === cols && hasLeft) {
+                        sides[1] = false; // Open Right
+                    }
+
+                    // Check Top wrapping
+                    if (rect.r === 0 && hasBottom) {
+                        sides[0] = false; // Open Top
+                    }
+
+                    // Check Bottom wrapping
+                    if (rect.r + rect.h === rows && hasTop) {
+                        sides[2] = false; // Open Bottom
+                    }
+                }
+
+                drawRect(rect, color, sides);
             });
         });
+    }
+
+    function drawRect(rect, color, sides) {
+        // sides: [Top, Right, Bottom, Left] booleans
+
+        const padding = 5;
+        const cellSize = 60;
+        const r = 20; // Corner radius
+
+        let x = rect.c * cellSize + padding;
+        let y = rect.r * cellSize + padding;
+        let w = rect.w * cellSize - 2 * padding;
+        let h = rect.h * cellSize - 2 * padding;
+
+        // If a side is open, we extend the box to the edge of the cell (removing padding)
+
+        if (!sides[3]) { // Open Left
+            x -= padding;
+            w += padding;
+        }
+        if (!sides[1]) { // Open Right
+            w += padding;
+        }
+        if (!sides[0]) { // Open Top
+            y -= padding;
+            h += padding;
+        }
+        if (!sides[2]) { // Open Bottom
+            h += padding;
+        }
+
+        // Construct Path Manually
+        // We will build the path string based on which corners are rounded.
+        // Start from Top-Left corner.
+
+        let d = "";
+
+        // Top-Left Corner Logic
+
+        if (sides[3] && sides[0]) {
+             // Both closed: Move to start of arc (x, y+r), Arc to (x+r, y)
+             d += `M ${x} ${y+r} A ${r} ${r} 0 0 1 ${x+r} ${y}`;
+        } else if (!sides[3] && sides[0]) {
+             // Left open, Top closed: Start at (x, y)
+             d += `M ${x} ${y}`;
+        } else if (sides[3] && !sides[0]) {
+             // Left closed, Top open: Start at (x, y) (end of left line)
+             d += `M ${x} ${y}`; // We will close loop later or just start here.
+        } else {
+             // Both open (Corner of full map?): Start at (x, y)
+             d += `M ${x} ${y}`;
+        }
+
+        // Top Edge
+        if (sides[0]) {
+            if (sides[1]) {
+                 d += ` L ${x+w-r} ${y}`; // Line to start of right corner
+            } else {
+                 d += ` L ${x+w} ${y}`; // Line to edge
+            }
+        } else {
+             // Top open. Move to Top-Right.
+             d += ` M ${x+w} ${y}`;
+        }
+
+        // Top-Right Corner
+        if (sides[0] && sides[1]) {
+            d += ` A ${r} ${r} 0 0 1 ${x+w} ${y+r}`;
+        } else if (!sides[0] && sides[1]) {
+            // Top open, Right closed
+             // Already at (x+w, y).
+        }
+
+        // Right Edge
+        if (sides[1]) {
+            if (sides[2]) {
+                d += ` L ${x+w} ${y+h-r}`;
+            } else {
+                d += ` L ${x+w} ${y+h}`;
+            }
+        } else {
+             d += ` M ${x+w} ${y+h}`;
+        }
+
+        // Bottom-Right Corner
+        if (sides[1] && sides[2]) {
+            d += ` A ${r} ${r} 0 0 1 ${x+w-r} ${y+h}`;
+        }
+
+        // Bottom Edge
+        if (sides[2]) {
+            if (sides[3]) {
+                d += ` L ${x+r} ${y+h}`;
+            } else {
+                d += ` L ${x} ${y+h}`;
+            }
+        } else {
+             d += ` M ${x} ${y+h}`;
+        }
+
+        // Bottom-Left Corner
+        if (sides[2] && sides[3]) {
+            d += ` A ${r} ${r} 0 0 1 ${x} ${y+h-r}`;
+        }
+
+        // Left Edge
+        if (sides[3]) {
+            if (sides[0]) {
+                d += ` L ${x} ${y+r}`;
+            } else {
+                d += ` L ${x} ${y}`;
+            }
+        }
+
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", d);
+        path.setAttribute("fill", "none");
+        path.setAttribute("stroke", color);
+        path.setAttribute("stroke-width", "4");
+        path.setAttribute("stroke-opacity", "0.8");
+
+        kmapOverlay.appendChild(path);
     }
 
     init();
