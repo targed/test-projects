@@ -216,6 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateSolution() {
         const result = solver.solve();
+        console.log("Groups:", result.groups); // Debugging
 
         // Render Color-Mapped Equation
         equationDisplay.innerHTML = ''; // Clear
@@ -281,6 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
         groups.forEach((group, gIndex) => {
             const color = colors[gIndex % colors.length];
             const minterms = group.getCoveredMinterms();
+            console.log(`Drawing group ${gIndex} (color ${color}): minterms`, minterms); // Debug
 
             // Map minterms to (row, col) coordinates
             const coords = minterms.map(m => {
@@ -295,6 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                  return {r, c};
             });
+            console.log(`Group ${gIndex} Coords:`, coords);
 
             // 1. Identify Rectangles (visual parts)
             const rectangles = [];
@@ -332,6 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             });
+            console.log(`Group ${gIndex} Rectangles:`, rectangles);
 
             // 2. Determine if the group wraps
             const hasLeft = coords.some(p => p.c === 0);
@@ -340,6 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const hasBottom = coords.some(p => p.r === rows - 1);
 
             const isWrapping = rectangles.length > 1; // Basic heuristic: if it split, it wrapped.
+            console.log(`Group ${gIndex} isWrapping:`, isWrapping);
 
             rectangles.forEach(rect => {
                 const sides = [true, true, true, true]; // Top, Right, Bottom, Left
