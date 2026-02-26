@@ -72,6 +72,7 @@ class KMapSolver {
             };
         }
 
+        // Check if no terms need covering
         if (terms.length === 0) {
              // If we are looking for 1s (SOP) and find none, result is 0.
              // If we are looking for 0s (POS) and find none, result is 1 (function is always 1).
@@ -81,16 +82,13 @@ class KMapSolver {
              };
         }
 
+        // Check for full map (always true)
+        // If SOP and all cells are 1 or x (and at least one 1), result is 1.
+        // If POS and all cells are 0 or x (and at least one 0), result is 0.
+        // Actually, let the algorithm handle it, except the case where it simplifies to 1 or 0.
+
         // 1. Find Prime Implicants
         const primeImplicants = this.getPrimeImplicants(allTerms);
-        
-        // Edge case: If only one prime implicant covers everything
-        if (primeImplicants.length === 1 && primeImplicants[0].getCoveredMinterms().length === this.size) {
-            return {
-                equation: this.mode === 'SOP' ? '1' : '0',
-                groups: primeImplicants
-            };
-        }
 
         // 2. Filter Prime Implicants to cover all required terms (Essential Prime Implicants + optimization)
         // We only need to cover 'terms', not 'dontCares'.
@@ -117,7 +115,6 @@ class KMapSolver {
         });
 
         const primeImplicants = [];
-        const primeImplicantIds = new Set(); // Track IDs for faster duplicate checking
 
         let merging = true;
         while (merging) {
@@ -131,6 +128,8 @@ class KMapSolver {
                         const merged = imp1.merge(imp2);
                         if (merged) {
                             // Avoid duplicates in new groups
+                            // Note: merged.value contains 0s for dashed bits.
+                            // We group by number of 1s in the value (excluding dashes, effectively)
                             const setBits = this.countSetBits(merged.value);
                             const existing = newGroups[setBits].find(imp => imp.equals(merged));
                             if (!existing) {
@@ -144,7 +143,7 @@ class KMapSolver {
                 }
             }
 
-            // Collect implicants that weren't merged this round (these are prime)
+            // Collect implicants that weren't merged this round
             for (let group of groups) {
                 for (let imp of group) {
                     if (!used.has(imp.id)) {
@@ -159,10 +158,10 @@ class KMapSolver {
             groups = newGroups;
         }
 
-        // Add any remaining from the last pass (these couldn't be merged further)
+        // Add any remaining from the last pass
         for (let group of groups) {
             for (let imp of group) {
-                if (!primeImplicants.some(pi => pi.equals(imp))) {
+                 if (!primeImplicants.some(pi => pi.equals(imp))) {
                     primeImplicants.push(imp);
                 }
             }
@@ -175,35 +174,29 @@ class KMapSolver {
         // This is the set covering problem.
         // We need to select a minimum number of Prime Implicants to cover all 'minterms'.
 
-        if (minterms.length === 0) return [];
-
         // Map each PI to the minterms it covers
-        let availablePIs = primeImplicants.map((pi, idx) => {
+        const piCovers = primeImplicants.map(pi => {
             return {
                 pi: pi,
-                covers: pi.getCoveredMinterms().filter(m => minterms.includes(m)),
-                originalIndex: idx
+                covers: pi.getCoveredMinterms().filter(m => minterms.includes(m))
             };
         }).filter(item => item.covers.length > 0); // Remove PIs that only cover don't cares
 
         let requiredMinterms = new Set(minterms);
         const finalPIs = [];
-        const usedIndices = new Set(); // Track which PIs we've already selected
 
-        // 1. Find Essential Prime Implicants and greedy selections
-        while (requiredMinterms.size > 0 && availablePIs.length > 0) {
-            // Filter out PIs that don't cover any remaining minterms
-            availablePIs = availablePIs.filter(item => 
-                item.covers.some(m => requiredMinterms.has(m))
-            );
+        // 1. Find Essential Prime Implicants
+        // A PI is essential if it covers a minterm that no other PI covers.
 
-            if (availablePIs.length === 0) break;
+        while (requiredMinterms.size > 0) {
+            // Check for essentials
+            let essentialFound = false;
 
-            // Rebuild the coverage map for remaining PIs and minterms
+            // Map minterm -> list of PIs covering it
             const mintermToPIs = new Map();
             requiredMinterms.forEach(m => mintermToPIs.set(m, []));
 
-            availablePIs.forEach((item, index) => {
+            piCovers.forEach((item, index) => {
                 item.covers.forEach(m => {
                     if (mintermToPIs.has(m)) {
                         mintermToPIs.get(m).push(index);
@@ -211,7 +204,6 @@ class KMapSolver {
                 });
             });
 
-            // Find essential PIs (PIs that are the only option for at least one minterm)
             const essentials = new Set();
             for (let [m, piIndices] of mintermToPIs) {
                 if (piIndices.length === 1) {
@@ -219,85 +211,69 @@ class KMapSolver {
                 }
             }
 
-            let selectedIndex = -1;
-
             if (essentials.size > 0) {
-                // Select an essential PI
-                selectedIndex = essentials.values().next().value;
+                essentialFound = true;
+                essentials.forEach(index => {
+                    const selected = piCovers[index];
+                    finalPIs.push(selected.pi);
+                    // Remove covered minterms
+                    selected.covers.forEach(m => requiredMinterms.delete(m));
+                    // Remove this PI from consideration
+                    // (We handle this by just checking requiredMinterms in the next loop or filtering piCovers)
+                });
+
+                // Remove used PIs from piCovers
+                // Actually, simpler to just rebuild piCovers or mark them used?
+                // Let's just filter requiredMinterms. The loop continues.
+                // We should remove the PIs we just added so we don't pick them again?
+                // Yes, but the logic below works on 'requiredMinterms'. If it's empty, we stop.
             } else {
-                // No essential PIs, use greedy heuristic
-                // Pick the PI that covers the most remaining minterms AND has the largest total coverage (fewest literals)
+                // No essential PIs found, but minterms remain. This is a cyclic core.
+                // Use a heuristic: pick the PI that covers the most remaining minterms.
+                // (Petrick's method is exact but complex to implement fully here, greedy is usually sufficient for standard K-maps)
+
+                let bestPIIndex = -1;
                 let maxCover = -1;
-                let maxTotalCover = -1;
-                
-                availablePIs.forEach((item, index) => {
-                    const count = item.covers.filter(m => requiredMinterms.has(m)).length;
-                    const totalCount = item.pi.getCoveredMinterms().length; // Larger groups are better
-                    
-                    if (count > maxCover || (count === maxCover && totalCount > maxTotalCover)) {
-                        maxCover = count;
-                        maxTotalCover = totalCount;
-                        selectedIndex = index;
+
+                piCovers.forEach((item, index) => {
+                    // Calculate how many *remaining* minterms this PI covers
+                    // We need to be careful not to pick a PI already in finalPIs (though essentials logic should prevent that if implemented right)
+                    // But here we are in the non-essential part.
+                    if (!finalPIs.includes(item.pi)) {
+                        const count = item.covers.filter(m => requiredMinterms.has(m)).length;
+                        if (count > maxCover) {
+                            maxCover = count;
+                            bestPIIndex = index;
+                        }
                     }
                 });
+
+                if (bestPIIndex !== -1 && maxCover > 0) {
+                    const selected = piCovers[bestPIIndex];
+                    finalPIs.push(selected.pi);
+                    selected.covers.forEach(m => requiredMinterms.delete(m));
+                    essentialFound = true;
+                } else {
+                    // Should not happen if a solution exists
+                    break;
+                }
             }
 
-            if (selectedIndex !== -1) {
-                const selected = availablePIs[selectedIndex];
-                finalPIs.push(selected.pi);
-                usedIndices.add(selected.originalIndex);
-                
-                // Remove covered minterms
-                selected.covers.forEach(m => requiredMinterms.delete(m));
-                
-                // Remove the selected PI from available PIs
-                availablePIs.splice(selectedIndex, 1);
-            } else {
-                // No valid selection found but minterms remain - shouldn't happen
-                console.error("No solution found for remaining minterms:", Array.from(requiredMinterms));
+            if (!essentialFound && requiredMinterms.size > 0) {
+                console.error("Stuck in loop or no solution found");
                 break;
             }
         }
 
-        // Final pass: remove any redundant PIs that might have been added
-        // A PI is redundant if all its minterms are covered by other selected PIs
-        const optimizedPIs = [];
-        for (let i = 0; i < finalPIs.length; i++) {
-            const currentPI = finalPIs[i];
-            const currentCovers = currentPI.getCoveredMinterms().filter(m => minterms.includes(m));
-            
-            // Check if all minterms covered by currentPI are covered by other PIs
-            let isRedundant = true;
-            for (const m of currentCovers) {
-                let coveredByOther = false;
-                for (let j = 0; j < finalPIs.length; j++) {
-                    if (i !== j) {
-                        const otherCovers = finalPIs[j].getCoveredMinterms();
-                        if (otherCovers.includes(m)) {
-                            coveredByOther = true;
-                            break;
-                        }
-                    }
-                }
-                if (!coveredByOther) {
-                    isRedundant = false;
-                    break;
-                }
-            }
-            
-            if (!isRedundant) {
-                optimizedPIs.push(currentPI);
-            }
-        }
-
-        return optimizedPIs;
+        return finalPIs;
     }
 
     formatEquation(implicants) {
         if (implicants.length === 0) return this.mode === 'SOP' ? '0' : '1';
 
-        // If one implicant covers everything and has no literals (mask 0, value 0), it's a "1"
-        if (implicants.length === 1 && implicants[0].mask === 0) {
+        // If one implicant covers everything (mask has all bits set)
+        // If dashMask has all bits set (e.g. 1111 for 4 vars), it covers everything.
+        if (implicants.length === 1 && implicants[0].dashMask === (1 << this.numVars) - 1) {
              return this.mode === 'SOP' ? '1' : '0';
         }
 

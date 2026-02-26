@@ -75,6 +75,7 @@ select {
     border: 2px solid #333;
     position: relative; /* For absolute positioning of labels */
     background-color: #fff;
+    margin: 30px; /* Space for arrows */
 }
 
 /* Styles for K-Map cells */
@@ -175,4 +176,31 @@ tr:hover {
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+/* Rotation Arrows */
+.rotate-btn {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #7f8c8d;
+    transition: color 0.2s, transform 0.2s;
+    padding: 0;
+}
+
+.rotate-btn:hover {
+    color: #2c3e50;
+    background-color: transparent;
+    transform: scale(1.2);
+}
+
+.rotate-btn:active {
+    transform: scale(0.9);
 }

@@ -19,6 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let solver = new KMapSolver(parseInt(varCountSelect.value));
     let showIndices = true;
     let showTruthTable = false;
+    let rowOffset = 0;
+    let colOffset = 0;
 
     // Gray Code sequences for headers
     // 2 vars: 0, 1
@@ -39,18 +41,20 @@ document.addEventListener('DOMContentLoaded', () => {
         varCountSelect.addEventListener('change', () => {
             solver = new KMapSolver(parseInt(varCountSelect.value));
             solver.setMode(solveModeSelect.value);
+            rowOffset = 0;
+            colOffset = 0;
             renderKMap();
             updateSolution();
         });
 
         solveModeSelect.addEventListener('change', () => {
             solver.setMode(solveModeSelect.value);
-            updateSolution(); // Just resolve, grid doesn't change structure
+            updateSolution();
         });
 
         resetBtn.addEventListener('click', () => {
             solver.reset();
-            renderKMap(); // Re-render to clear cells
+            renderKMap();
             updateSolution();
         });
 
@@ -66,6 +70,15 @@ document.addEventListener('DOMContentLoaded', () => {
             truthTableContainer.classList.toggle('hidden', !showTruthTable);
             if (showTruthTable) renderTruthTable();
         });
+    }
+
+    function rotateArray(arr, offset) {
+        // offset > 0: shift right (last to first)
+        // offset < 0: shift left (first to last)
+        const len = arr.length;
+        const normalizedOffset = ((offset % len) + len) % len;
+        if (normalizedOffset === 0) return [...arr];
+        return [...arr.slice(len - normalizedOffset), ...arr.slice(0, len - normalizedOffset)];
     }
 
     function renderKMap() {
@@ -87,9 +100,39 @@ document.addEventListener('DOMContentLoaded', () => {
         kmapGrid.style.gridTemplateColumns = `repeat(${cols}, 60px)`;
         kmapGrid.style.gridTemplateRows = `repeat(${rows}, 60px)`;
 
-        // Labels
-        const colGray = grayCodes[colVarsCount];
-        const rowGray = grayCodes[rowVarsCount];
+        // Labels (rotated)
+        const colGray = rotateArray(grayCodes[colVarsCount], colOffset);
+        const rowGray = rotateArray(grayCodes[rowVarsCount], rowOffset);
+
+        // --- Rotation Controls ---
+        // Left Arrow
+        const leftBtn = createRotateBtn('◀', () => { colOffset--; renderKMap(); updateSolution(); });
+        leftBtn.style.left = '-30px';
+        leftBtn.style.top = '50%';
+        leftBtn.style.transform = 'translateY(-50%)';
+        kmapGrid.appendChild(leftBtn);
+
+        // Right Arrow
+        const rightBtn = createRotateBtn('▶', () => { colOffset++; renderKMap(); updateSolution(); });
+        rightBtn.style.right = '-30px';
+        rightBtn.style.top = '50%';
+        rightBtn.style.transform = 'translateY(-50%)';
+        kmapGrid.appendChild(rightBtn);
+
+        // Up Arrow
+        const upBtn = createRotateBtn('▲', () => { rowOffset--; renderKMap(); updateSolution(); });
+        upBtn.style.top = '-30px';
+        upBtn.style.left = '50%';
+        upBtn.style.transform = 'translateX(-50%)';
+        kmapGrid.appendChild(upBtn);
+
+        // Down Arrow
+        const downBtn = createRotateBtn('▼', () => { rowOffset++; renderKMap(); updateSolution(); });
+        downBtn.style.bottom = '-30px';
+        downBtn.style.left = '50%';
+        downBtn.style.transform = 'translateX(-50%)';
+        kmapGrid.appendChild(downBtn);
+
 
         // Column Labels
         for (let j = 0; j < cols; j++) {
@@ -130,13 +173,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Generate Cells
         for (let i = 0; i < rows; i++) {
             for (let j = 0; j < cols; j++) {
-                // Determine actual binary index
-                // Row bits are MSBs, Col bits are LSBs
-
+                // Determine actual binary index using ROTATED labels
                 const rowBits = parseInt(rowGray[i], 2);
                 const colBits = parseInt(colGray[j], 2);
-
-                // Index = (RowBits << ColVarsCount) | ColBits
                 const index = (rowBits << colVarsCount) | colBits;
 
                 const cell = document.createElement('div');
@@ -158,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 cell.addEventListener('click', () => {
                     const newVal = solver.toggleGridValue(index);
-                    cell.firstChild.textContent = newVal === 2 ? 'X' : newVal; // Update text, keep span
+                    cell.firstChild.textContent = newVal === 2 ? 'X' : newVal;
                     updateSolution();
                     if (showTruthTable) renderTruthTable();
                 });
@@ -166,6 +205,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 kmapGrid.appendChild(cell);
             }
         }
+    }
+
+    function createRotateBtn(text, onClick) {
+        const btn = document.createElement('button');
+        btn.className = 'rotate-btn';
+        btn.innerText = text;
+        btn.onclick = onClick;
+        return btn;
     }
 
     function renderTruthTable() {
@@ -204,7 +251,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const newVal = solver.toggleGridValue(index);
                 e.target.innerText = newVal === 2 ? 'X' : newVal;
 
-                // Update K-Map cell text
+                // Update K-Map cell text (find cell by data-index)
+                // Note: With rotation, the cell at (0,0) is not index 0.
+                // But data-index is correct on the cell.
                 const kmapCell = document.querySelector(`.kmap-cell[data-index="${index}"]`);
                 if (kmapCell) {
                     kmapCell.childNodes[0].textContent = newVal === 2 ? 'X' : newVal;
@@ -216,7 +265,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateSolution() {
         const result = solver.solve();
-        console.log("Groups:", result.groups); // Debugging
 
         // Render Color-Mapped Equation
         equationDisplay.innerHTML = ''; // Clear
@@ -256,7 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (solver.mode === 'SOP') {
                         separator.innerText = ' + ';
                     } else {
-                        separator.innerText = ''; // Implicit multiplication or none for POS as they are parenthesized
+                        separator.innerText = '';
                     }
                     equationDisplay.appendChild(separator);
                 }
@@ -279,66 +327,68 @@ document.addEventListener('DOMContentLoaded', () => {
         const rows = 1 << rowVarsCount;
         const cols = 1 << colVarsCount;
 
+        // Rotated Gray Codes
+        const colGray = rotateArray(grayCodes[colVarsCount], colOffset);
+        const rowGray = rotateArray(grayCodes[rowVarsCount], rowOffset);
+
         groups.forEach((group, gIndex) => {
             const color = colors[gIndex % colors.length];
             const minterms = group.getCoveredMinterms();
-            console.log(`Drawing group ${gIndex} (color ${color}): minterms`, minterms); // Debug
 
-            // Map minterms to (row, col) coordinates
+            // Map minterms to (row, col) coordinates using ROTATED labels
             const coords = minterms.map(m => {
                  const rowBits = m >> colVarsCount;
                  const colBits = m & ((1 << colVarsCount) - 1);
 
-                 const rowGrayArr = grayCodes[rowVarsCount];
-                 const colGrayArr = grayCodes[colVarsCount];
-
-                 const r = rowGrayArr.indexOf(rowBits.toString(2).padStart(rowVarsCount, '0'));
-                 const c = colGrayArr.indexOf(colBits.toString(2).padStart(colVarsCount, '0'));
+                 // Look up in Rotated Arrays
+                 const r = rowGray.indexOf(rowBits.toString(2).padStart(rowVarsCount, '0'));
+                 const c = colGray.indexOf(colBits.toString(2).padStart(colVarsCount, '0'));
 
                  return {r, c};
             });
-            console.log(`Group ${gIndex} Coords:`, coords);
 
-            // 1. Identify Rectangles (visual parts)
+            // Sort coordinates
+            coords.sort((a, b) => {
+                if (a.r !== b.r) return a.r - b.r;
+                return a.c - b.c;
+            });
+
+            // 1. Identify Rectangles
             const rectangles = [];
             const map = Array(rows).fill(0).map(() => Array(cols).fill(0));
             coords.forEach(p => map[p.r][p.c] = 1);
             const visited = new Set();
 
-            // We need to find the largest possible rectangles to represent the group visually
-            // A group might be split across edges, so we find contiguous blocks
-            
-            for (let r = 0; r < rows; r++) {
-                for (let c = 0; c < cols; c++) {
-                    if (map[r][c] && !visited.has(`${r},${c}`)) {
-                        // Found a new block, expand it
-                        let w = 1;
-                        while (c + w < cols && map[r][c + w] && !visited.has(`${r},${c + w}`)) w++;
+            coords.forEach(p => {
+                const key = `${p.r},${p.c}`;
+                if (visited.has(key)) return;
 
-                        let h = 1;
-                        let valid = true;
-                        while (r + h < rows) {
-                            for (let k = 0; k < w; k++) {
-                                if (!map[r + h][c + k] || visited.has(`${r + h},${c + k}`)) {
-                                    valid = false;
-                                    break;
-                                }
-                            }
-                            if (!valid) break;
-                            h++;
-                        }
+                // Expand Right
+                let w = 1;
+                while (p.c + w < cols && map[p.r][p.c + w]) w++;
 
-                        rectangles.push({r, c, w, h});
-
-                        for(let i=0; i<h; i++) {
-                            for(let j=0; j<w; j++) {
-                                visited.add(`${r + i},${c + j}`);
-                            }
+                // Expand Down
+                let h = 1;
+                let valid = true;
+                while (p.r + h < rows) {
+                    for (let k = 0; k < w; k++) {
+                        if (!map[p.r + h][p.c + k]) {
+                            valid = false;
+                            break;
                         }
                     }
+                    if (!valid) break;
+                    h++;
                 }
-            }
-            console.log(`Group ${gIndex} Rectangles:`, rectangles);
+
+                rectangles.push({r: p.r, c: p.c, w, h});
+
+                for(let i=0; i<h; i++) {
+                    for(let j=0; j<w; j++) {
+                        visited.add(`${p.r + i},${p.c + j}`);
+                    }
+                }
+            });
 
             // 2. Determine if the group wraps
             const hasLeft = coords.some(p => p.c === 0);
@@ -346,50 +396,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const hasTop = coords.some(p => p.r === 0);
             const hasBottom = coords.some(p => p.r === rows - 1);
 
-            // A group wraps if it has cells on BOTH opposite edges AND it's split into multiple rectangles
-            // We need to be careful: a group might span the entire width/height and NOT be split.
-            // If it spans the entire width/height, it's just one big rectangle and shouldn't have open edges.
-            
-            // Check if the group actually wraps around the edges (is split across the boundary)
-            // A group wraps horizontally if it has cells on left and right, AND it doesn't cover the whole width continuously
-            const coversFullWidth = rectangles.some(r => r.w === cols);
-            const wrapsHorizontally = hasLeft && hasRight && !coversFullWidth;
-            
-            // A group wraps vertically if it has cells on top and bottom, AND it doesn't cover the whole height continuously
-            const coversFullHeight = rectangles.some(r => r.h === rows);
-            const wrapsVertically = hasTop && hasBottom && !coversFullHeight;
-            
-            console.log(`Group ${gIndex} wraps H:${wrapsHorizontally} V:${wrapsVertically}`);
+            const isWrapping = rectangles.length > 1;
 
             rectangles.forEach(rect => {
                 const sides = [true, true, true, true]; // Top, Right, Bottom, Left
 
-                // Check Left wrapping: open left if group wraps horizontally AND this rect is at left edge
-                if (wrapsHorizontally && rect.c === 0) {
-                    sides[3] = false; // Open Left
-                }
-
-                // Check Right wrapping: open right if group wraps horizontally AND this rect is at right edge
-                if (wrapsHorizontally && rect.c + rect.w === cols) {
-                    sides[1] = false; // Open Right
-                }
-
-                // Check Top wrapping: open top if group wraps vertically AND this rect is at top edge
-                if (wrapsVertically && rect.r === 0) {
-                    sides[0] = false; // Open Top
-                }
-
-                // Check Bottom wrapping: open bottom if group wraps vertically AND this rect is at bottom edge
-                if (wrapsVertically && rect.r + rect.h === rows) {
-                    sides[2] = false; // Open Bottom
-                }
-
-                // Special case for 4 corners wrapping
-                if (hasLeft && hasRight && hasTop && hasBottom && rectangles.length === 4) {
-                    if (rect.r === 0 && rect.c === 0) { sides[0] = false; sides[3] = false; } // Top-Left
-                    if (rect.r === 0 && rect.c + rect.w === cols) { sides[0] = false; sides[1] = false; } // Top-Right
-                    if (rect.r + rect.h === rows && rect.c === 0) { sides[2] = false; sides[3] = false; } // Bottom-Left
-                    if (rect.r + rect.h === rows && rect.c + rect.w === cols) { sides[2] = false; sides[1] = false; } // Bottom-Right
+                if (isWrapping) {
+                    if (rect.c === 0 && hasRight) sides[3] = false;
+                    if (rect.c + rect.w === cols && hasLeft) sides[1] = false;
+                    if (rect.r === 0 && hasBottom) sides[0] = false;
+                    if (rect.r + rect.h === rows && hasTop) sides[2] = false;
                 }
 
                 drawRect(rect, color, sides);
@@ -398,85 +414,53 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function drawRect(rect, color, sides) {
-        // sides: [Top, Right, Bottom, Left] booleans
-
+        // ... (Same drawing logic as before) ...
         const padding = 5;
         const cellSize = 60;
-        const r = 20; // Corner radius
+        const r = 20;
 
         let x = rect.c * cellSize + padding;
         let y = rect.r * cellSize + padding;
         let w = rect.w * cellSize - 2 * padding;
         let h = rect.h * cellSize - 2 * padding;
 
-        // If a side is open, we extend the box to the edge of the cell (removing padding)
-
-        if (!sides[3]) { // Open Left
-            x -= padding;
-            w += padding;
-        }
-        if (!sides[1]) { // Open Right
-            w += padding;
-        }
-        if (!sides[0]) { // Open Top
-            y -= padding;
-            h += padding;
-        }
-        if (!sides[2]) { // Open Bottom
-            h += padding;
-        }
-
-        // Construct Path Manually
-        // We will build the path string based on which corners are rounded.
-        // Start from Top-Left corner.
+        if (!sides[3]) { x -= padding; w += padding; }
+        if (!sides[1]) { w += padding; }
+        if (!sides[0]) { y -= padding; h += padding; }
+        if (!sides[2]) { h += padding; }
 
         let d = "";
 
-        // Top-Left Corner Logic
-
+        // Start Top-Left
         if (sides[3] && sides[0]) {
-             // Both closed: Move to start of arc (x, y+r), Arc to (x+r, y)
              d += `M ${x} ${y+r} A ${r} ${r} 0 0 1 ${x+r} ${y}`;
         } else if (!sides[3] && sides[0]) {
-             // Left open, Top closed: Start at (x, y)
              d += `M ${x} ${y}`;
         } else if (sides[3] && !sides[0]) {
-             // Left closed, Top open: Start at (x, y) (end of left line)
-             d += `M ${x} ${y}`; // We will close loop later or just start here.
+             d += `M ${x} ${y}`;
         } else {
-             // Both open (Corner of full map?): Start at (x, y)
              d += `M ${x} ${y}`;
         }
 
         // Top Edge
         if (sides[0]) {
-            if (sides[1]) {
-                 d += ` L ${x+w-r} ${y}`; // Line to start of right corner
-            } else {
-                 d += ` L ${x+w} ${y}`; // Line to edge
-            }
+            if (sides[1]) d += ` L ${x+w-r} ${y}`;
+            else d += ` L ${x+w} ${y}`;
         } else {
-             // Top open. Move to Top-Right.
              d += ` M ${x+w} ${y}`;
         }
 
         // Top-Right Corner
         if (sides[0] && sides[1]) {
             d += ` A ${r} ${r} 0 0 1 ${x+w} ${y+r}`;
-        } else if (!sides[0] && sides[1]) {
-            // Top open, Right closed
-             // Already at (x+w, y).
         }
 
         // Right Edge
         if (sides[1]) {
-            if (sides[2]) {
-                d += ` L ${x+w} ${y+h-r}`;
-            } else {
-                d += ` L ${x+w} ${y+h}`;
-            }
+            if (sides[2]) d += ` L ${x+w} ${y+h-r}`;
+            else d += ` L ${x+w} ${y+h}`;
         } else {
-             d += ` M ${x+w} ${y+h}`;
+            d += ` M ${x+w} ${y+h}`;
         }
 
         // Bottom-Right Corner
@@ -486,11 +470,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Bottom Edge
         if (sides[2]) {
-            if (sides[3]) {
-                d += ` L ${x+r} ${y+h}`;
-            } else {
-                d += ` L ${x} ${y+h}`;
-            }
+            if (sides[3]) d += ` L ${x+r} ${y+h}`;
+            else d += ` L ${x} ${y+h}`;
         } else {
              d += ` M ${x} ${y+h}`;
         }
@@ -502,11 +483,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Left Edge
         if (sides[3]) {
-            if (sides[0]) {
-                d += ` L ${x} ${y+r}`;
-            } else {
-                d += ` L ${x} ${y}`;
-            }
+            if (sides[0]) d += ` L ${x} ${y+r}`;
+            else d += ` L ${x} ${y}`;
         }
 
         const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
