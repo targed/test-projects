@@ -10,6 +10,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetBtn = document.getElementById('reset-btn');
     const toggleIndicesBtn = document.getElementById('toggle-indices');
     const toggleTruthTableBtn = document.getElementById('toggle-truth-table');
+    const toggleAlgebraBtn = document.getElementById('toggle-algebra');
+    const algebraContainer = document.getElementById('algebra-container');
+    const algebraInput = document.getElementById('algebra-input');
+    const solveAlgebraBtn = document.getElementById('solve-algebra-btn');
+    const algebraSteps = document.getElementById('algebra-steps');
+
     const kmapGrid = document.getElementById('kmap-grid');
     const equationDisplay = document.getElementById('equation-display');
     const kmapOverlay = document.getElementById('kmap-overlay');
@@ -19,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let solver = new KMapSolver(parseInt(varCountSelect.value));
     let showIndices = true;
     let showTruthTable = false;
+    let showAlgebra = false;
     let rowOffset = 0;
     let colOffset = 0;
 
@@ -70,6 +77,123 @@ document.addEventListener('DOMContentLoaded', () => {
             truthTableContainer.classList.toggle('hidden', !showTruthTable);
             if (showTruthTable) renderTruthTable();
         });
+
+        toggleAlgebraBtn.addEventListener('click', () => {
+            showAlgebra = !showAlgebra;
+            algebraContainer.classList.toggle('hidden', !showAlgebra);
+        });
+
+        solveAlgebraBtn.addEventListener('click', handleAlgebraSolve);
+    }
+
+    function handleAlgebraSolve() {
+        const input = algebraInput.value.trim();
+        if (!input) return;
+
+        try {
+            const parser = new BooleanParser();
+            const ast = parser.parse(input);
+
+            // Extract variables
+            const vars = new Set();
+            function traverse(node) {
+                if (!node) return;
+                if (node.type === 'VAR') vars.add(node.value);
+                traverse(node.left);
+                traverse(node.right);
+            }
+            traverse(ast);
+
+            // Convert to array and sort (A, B, C...)
+            const sortedVars = Array.from(vars).sort();
+            let numVars = sortedVars.length;
+
+            if (numVars === 0) {
+                // Constants only, assume current var count
+                numVars = solver.numVars;
+            } else if (numVars < 2) {
+                numVars = 2; // Min 2 variables
+            } else if (numVars > 5) {
+                alert("Only up to 5 variables supported.");
+                return;
+            }
+
+            // Update Var Count Dropdown if needed
+            if (numVars !== solver.numVars) {
+                varCountSelect.value = numVars;
+                // We need to update the solver instance
+                solver = new KMapSolver(numVars);
+                rowOffset = 0;
+                colOffset = 0;
+            } else {
+                // Reset grid but keep size
+                solver.reset();
+            }
+
+            // Map variables to A, B, C... for the solver context
+            // Generate Truth Table
+            const size = 1 << numVars;
+            for (let i = 0; i < size; i++) {
+                const context = {};
+                // i is binary value. MSB is first variable.
+
+                for (let v = 0; v < numVars; v++) {
+                    // Extract bit: MSB is bit (numVars-1-v)
+                    const val = (i >> (numVars - 1 - v)) & 1;
+
+                    if (v < sortedVars.length) {
+                        context[sortedVars[v]] = val;
+                    }
+                }
+
+                const res = evaluateAST(ast, context);
+                solver.setGridValue(i, res);
+            }
+
+            renderKMap();
+            updateSolution();
+            if (showTruthTable) renderTruthTable();
+
+            // Display initial expression
+            algebraSteps.innerHTML = '';
+            const initialStepDiv = document.createElement('div');
+            initialStepDiv.className = 'algebra-step';
+            initialStepDiv.innerHTML = `<strong>Input:</strong> ${renderAST(ast)}`;
+            algebraSteps.appendChild(initialStepDiv);
+
+            // Perform Simplification
+            const steps = simplifyStepByStep(ast);
+
+            if (steps.length === 0) {
+                 const noSimpDiv = document.createElement('div');
+                 noSimpDiv.className = 'algebra-step';
+                 noSimpDiv.style.fontStyle = 'italic';
+                 noSimpDiv.innerText = "No further simplification found.";
+                 algebraSteps.appendChild(noSimpDiv);
+            } else {
+                steps.forEach((step, index) => {
+                    const stepDiv = document.createElement('div');
+                    stepDiv.className = 'algebra-step';
+                    // Arrow down symbol or similar to show progression
+                    stepDiv.innerHTML = `
+                        <div style="color: #666; font-size: 0.9em;">↓ ${step.description}</div>
+                        <div style="font-size: 1.1em; margin-top: 4px;">${renderAST(step.ast)}</div>
+                    `;
+                    algebraSteps.appendChild(stepDiv);
+                });
+
+                // Final result
+                const finalDiv = document.createElement('div');
+                finalDiv.className = 'algebra-step';
+                finalDiv.style.marginTop = '10px';
+                finalDiv.style.fontWeight = 'bold';
+                finalDiv.innerHTML = `Final Simplified Form: ${renderAST(steps[steps.length-1].ast)}`;
+                algebraSteps.appendChild(finalDiv);
+            }
+
+        } catch (e) {
+            alert("Error parsing expression: " + e.message);
+        }
     }
 
     function rotateArray(arr, offset) {
@@ -79,21 +203,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const normalizedOffset = ((offset % len) + len) % len;
         if (normalizedOffset === 0) return [...arr];
         return [...arr.slice(len - normalizedOffset), ...arr.slice(0, len - normalizedOffset)];
-    }
-
-    function createRotateBtn(text, onClick) {
-        const btn = document.createElement('button');
-        btn.innerText = text;
-        btn.className = 'rotate-btn';
-        btn.style.position = 'absolute';
-        btn.style.zIndex = '10';
-        btn.style.background = 'none';
-        btn.style.border = 'none';
-        btn.style.cursor = 'pointer';
-        btn.style.fontSize = '16px';
-        btn.style.color = '#7f8c8d';
-        btn.addEventListener('click', onClick);
-        return btn;
     }
 
     function renderKMap() {
@@ -374,36 +483,36 @@ document.addEventListener('DOMContentLoaded', () => {
             coords.forEach(p => map[p.r][p.c] = 1);
             const visited = new Set();
 
-            for (let r = 0; r < rows; r++) {
-                for (let c = 0; c < cols; c++) {
-                    if (map[r][c] && !visited.has(`${r},${c}`)) {
-                        // Found a new block, expand it
-                        let w = 1;
-                        while (c + w < cols && map[r][c + w] && !visited.has(`${r},${c + w}`)) w++;
+            coords.forEach(p => {
+                const key = `${p.r},${p.c}`;
+                if (visited.has(key)) return;
 
-                        let h = 1;
-                        let valid = true;
-                        while (r + h < rows) {
-                            for (let k = 0; k < w; k++) {
-                                if (!map[r + h][c + k] || visited.has(`${r + h},${c + k}`)) {
-                                    valid = false;
-                                    break;
-                                }
-                            }
-                            if (!valid) break;
-                            h++;
-                        }
+                // Expand Right
+                let w = 1;
+                while (p.c + w < cols && map[p.r][p.c + w]) w++;
 
-                        rectangles.push({r, c, w, h});
-
-                        for(let i=0; i<h; i++) {
-                            for(let j=0; j<w; j++) {
-                                visited.add(`${r + i},${c + j}`);
-                            }
+                // Expand Down
+                let h = 1;
+                let valid = true;
+                while (p.r + h < rows) {
+                    for (let k = 0; k < w; k++) {
+                        if (!map[p.r + h][p.c + k]) {
+                            valid = false;
+                            break;
                         }
                     }
+                    if (!valid) break;
+                    h++;
                 }
-            }
+
+                rectangles.push({r: p.r, c: p.c, w, h});
+
+                for(let i=0; i<h; i++) {
+                    for(let j=0; j<w; j++) {
+                        visited.add(`${p.r + i},${p.c + j}`);
+                    }
+                }
+            });
 
             // 2. Determine if the group wraps
             const hasLeft = coords.some(p => p.c === 0);
@@ -411,43 +520,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const hasTop = coords.some(p => p.r === 0);
             const hasBottom = coords.some(p => p.r === rows - 1);
 
-            // Check if the group actually wraps around the edges (is split across the boundary)
-            // A group wraps horizontally if it has cells on left and right, AND it doesn't cover the whole width continuously
-            // We need to check if the group is actually split horizontally
-            const isSplitHorizontally = hasLeft && hasRight && !rectangles.some(r => r.w === cols);
-            
-            // A group wraps vertically if it has cells on top and bottom, AND it doesn't cover the whole height continuously
-            const isSplitVertically = hasTop && hasBottom && !rectangles.some(r => r.h === rows);
+            const isWrapping = rectangles.length > 1;
 
             rectangles.forEach(rect => {
                 const sides = [true, true, true, true]; // Top, Right, Bottom, Left
 
-                // Check Left wrapping: open left if group wraps horizontally AND this rect is at left edge
-                if (isSplitHorizontally && rect.c === 0) {
-                    sides[3] = false; // Open Left
-                }
-
-                // Check Right wrapping: open right if group wraps horizontally AND this rect is at right edge
-                if (isSplitHorizontally && rect.c + rect.w === cols) {
-                    sides[1] = false; // Open Right
-                }
-
-                // Check Top wrapping: open top if group wraps vertically AND this rect is at top edge
-                if (isSplitVertically && rect.r === 0) {
-                    sides[0] = false; // Open Top
-                }
-
-                // Check Bottom wrapping: open bottom if group wraps vertically AND this rect is at bottom edge
-                if (isSplitVertically && rect.r + rect.h === rows) {
-                    sides[2] = false; // Open Bottom
-                }
-
-                // Special case for 4 corners wrapping
-                if (hasLeft && hasRight && hasTop && hasBottom && rectangles.length === 4) {
-                    if (rect.r === 0 && rect.c === 0) { sides[0] = false; sides[3] = false; } // Top-Left
-                    if (rect.r === 0 && rect.c + rect.w === cols) { sides[0] = false; sides[1] = false; } // Top-Right
-                    if (rect.r + rect.h === rows && rect.c === 0) { sides[2] = false; sides[3] = false; } // Bottom-Left
-                    if (rect.r + rect.h === rows && rect.c + rect.w === cols) { sides[2] = false; sides[1] = false; } // Bottom-Right
+                if (isWrapping) {
+                    if (rect.c === 0 && hasRight) sides[3] = false;
+                    if (rect.c + rect.w === cols && hasLeft) sides[1] = false;
+                    if (rect.r === 0 && hasBottom) sides[0] = false;
+                    if (rect.r + rect.h === rows && hasTop) sides[2] = false;
                 }
 
                 drawRect(rect, color, sides);

@@ -129,13 +129,12 @@ select {
 /* SVG Overlay for Groupings */
 .kmap-overlay {
     position: absolute;
-    top: 32px;
-    left: 32px;
-    width: calc(100% - 64px);
-    height: calc(100% - 64px);
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     pointer-events: none; /* Let clicks pass through to cells */
     z-index: 10;
-    overflow: visible;
 }
 
 /* Truth Table Styles */
@@ -177,7 +176,6 @@ tr:hover {
     display: flex;
     align-items: center;
     justify-content: center;
-    pointer-events: none;
 }
 
 /* Rotation Arrows */
@@ -205,4 +203,61 @@ tr:hover {
 
 .rotate-btn:active {
     transform: scale(0.9);
+}
+
+/* Boolean Algebra Solver Styles */
+#algebra-container {
+    margin: 20px 0;
+    width: 100%;
+    max-width: 800px;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.algebra-input-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+#algebra-input {
+    flex: 1;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+#solve-algebra-btn {
+    background-color: #2ecc71;
+}
+
+#solve-algebra-btn:hover {
+    background-color: #27ae60;
+}
+
+.algebra-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 400px;
+    overflow-y: auto;
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 5px;
+    border: 1px solid #eee;
+}
+
+.algebra-step {
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+.algebra-step:last-child {
+    border-bottom: none;
 }

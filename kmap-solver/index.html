@@ -28,6 +28,16 @@
             <button id="reset-btn">Reset</button>
             <button id="toggle-indices">Toggle Indices</button>
             <button id="toggle-truth-table">Toggle Truth Table</button>
+            <button id="toggle-algebra">Boolean Algebra Solver</button>
+        </div>
+
+        <div id="algebra-container" class="hidden">
+            <h3>Boolean Algebra Solver</h3>
+            <div class="algebra-input-group">
+                <input type="text" id="algebra-input" placeholder="Enter expression (e.g., A + B'C)">
+                <button id="solve-algebra-btn">Solve & Map</button>
+            </div>
+            <div id="algebra-steps" class="algebra-steps"></div>
         </div>
 
         <div id="solution-output" class="output-area">
@@ -53,6 +63,7 @@
     </div>
 
     <script src="solver.js"></script>
+    <script src="algebra.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
