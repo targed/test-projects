@@ -81,6 +81,21 @@ document.addEventListener('DOMContentLoaded', () => {
         return [...arr.slice(len - normalizedOffset), ...arr.slice(0, len - normalizedOffset)];
     }
 
+    function createRotateBtn(text, onClick) {
+        const btn = document.createElement('button');
+        btn.innerText = text;
+        btn.className = 'rotate-btn';
+        btn.style.position = 'absolute';
+        btn.style.zIndex = '10';
+        btn.style.background = 'none';
+        btn.style.border = 'none';
+        btn.style.cursor = 'pointer';
+        btn.style.fontSize = '16px';
+        btn.style.color = '#7f8c8d';
+        btn.addEventListener('click', onClick);
+        return btn;
+    }
+
     function renderKMap() {
         const numVars = solver.numVars;
         kmapGrid.innerHTML = '';
@@ -359,36 +374,36 @@ document.addEventListener('DOMContentLoaded', () => {
             coords.forEach(p => map[p.r][p.c] = 1);
             const visited = new Set();
 
-            coords.forEach(p => {
-                const key = `${p.r},${p.c}`;
-                if (visited.has(key)) return;
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    if (map[r][c] && !visited.has(`${r},${c}`)) {
+                        // Found a new block, expand it
+                        let w = 1;
+                        while (c + w < cols && map[r][c + w] && !visited.has(`${r},${c + w}`)) w++;
 
-                // Expand Right
-                let w = 1;
-                while (p.c + w < cols && map[p.r][p.c + w]) w++;
+                        let h = 1;
+                        let valid = true;
+                        while (r + h < rows) {
+                            for (let k = 0; k < w; k++) {
+                                if (!map[r + h][c + k] || visited.has(`${r + h},${c + k}`)) {
+                                    valid = false;
+                                    break;
+                                }
+                            }
+                            if (!valid) break;
+                            h++;
+                        }
 
-                // Expand Down
-                let h = 1;
-                let valid = true;
-                while (p.r + h < rows) {
-                    for (let k = 0; k < w; k++) {
-                        if (!map[p.r + h][p.c + k]) {
-                            valid = false;
-                            break;
+                        rectangles.push({r, c, w, h});
+
+                        for(let i=0; i<h; i++) {
+                            for(let j=0; j<w; j++) {
+                                visited.add(`${r + i},${c + j}`);
+                            }
                         }
                     }
-                    if (!valid) break;
-                    h++;
                 }
-
-                rectangles.push({r: p.r, c: p.c, w, h});
-
-                for(let i=0; i<h; i++) {
-                    for(let j=0; j<w; j++) {
-                        visited.add(`${p.r + i},${p.c + j}`);
-                    }
-                }
-            });
+            }
 
             // 2. Determine if the group wraps
             const hasLeft = coords.some(p => p.c === 0);
@@ -396,16 +411,43 @@ document.addEventListener('DOMContentLoaded', () => {
             const hasTop = coords.some(p => p.r === 0);
             const hasBottom = coords.some(p => p.r === rows - 1);
 
-            const isWrapping = rectangles.length > 1;
+            // Check if the group actually wraps around the edges (is split across the boundary)
+            // A group wraps horizontally if it has cells on left and right, AND it doesn't cover the whole width continuously
+            // We need to check if the group is actually split horizontally
+            const isSplitHorizontally = hasLeft && hasRight && !rectangles.some(r => r.w === cols);
+            
+            // A group wraps vertically if it has cells on top and bottom, AND it doesn't cover the whole height continuously
+            const isSplitVertically = hasTop && hasBottom && !rectangles.some(r => r.h === rows);
 
             rectangles.forEach(rect => {
                 const sides = [true, true, true, true]; // Top, Right, Bottom, Left
 
-                if (isWrapping) {
-                    if (rect.c === 0 && hasRight) sides[3] = false;
-                    if (rect.c + rect.w === cols && hasLeft) sides[1] = false;
-                    if (rect.r === 0 && hasBottom) sides[0] = false;
-                    if (rect.r + rect.h === rows && hasTop) sides[2] = false;
+                // Check Left wrapping: open left if group wraps horizontally AND this rect is at left edge
+                if (isSplitHorizontally && rect.c === 0) {
+                    sides[3] = false; // Open Left
+                }
+
+                // Check Right wrapping: open right if group wraps horizontally AND this rect is at right edge
+                if (isSplitHorizontally && rect.c + rect.w === cols) {
+                    sides[1] = false; // Open Right
+                }
+
+                // Check Top wrapping: open top if group wraps vertically AND this rect is at top edge
+                if (isSplitVertically && rect.r === 0) {
+                    sides[0] = false; // Open Top
+                }
+
+                // Check Bottom wrapping: open bottom if group wraps vertically AND this rect is at bottom edge
+                if (isSplitVertically && rect.r + rect.h === rows) {
+                    sides[2] = false; // Open Bottom
+                }
+
+                // Special case for 4 corners wrapping
+                if (hasLeft && hasRight && hasTop && hasBottom && rectangles.length === 4) {
+                    if (rect.r === 0 && rect.c === 0) { sides[0] = false; sides[3] = false; } // Top-Left
+                    if (rect.r === 0 && rect.c + rect.w === cols) { sides[0] = false; sides[1] = false; } // Top-Right
+                    if (rect.r + rect.h === rows && rect.c === 0) { sides[2] = false; sides[3] = false; } // Bottom-Left
+                    if (rect.r + rect.h === rows && rect.c + rect.w === cols) { sides[2] = false; sides[1] = false; } // Bottom-Right
                 }
 
                 drawRect(rect, color, sides);
