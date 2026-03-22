@@ -1,0 +1,13 @@
+{
+  "name": "logseq-mathformat-fixer",
+  "version": "1.0.0",
+  "main": "index.html",
+  "logseq": {
+    "id": "logseq-mathformat-fixer",
+    "title": "MathFormat Fixer",
+    "description": "Renders KaTeX math equations nested inside Markdown modifiers (bold, italics, headers, underline, strikethrough) by post-processing the DOM after the core parser runs.",
+    "icon": "icon.svg"
+  },
+  "author": "Community Fix",
+  "license": "MIT"
+}
