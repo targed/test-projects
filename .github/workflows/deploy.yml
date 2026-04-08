@@ -25,9 +25,11 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+        working-directory: ./kmap-solver
 
       - name: Build
         run: npm run build
+        working-directory: ./kmap-solver
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
