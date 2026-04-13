@@ -10,6 +10,7 @@ interface KMapProps {
     groups: any[];
     onRowOffsetChange: (offset: number) => void;
     onColOffsetChange: (offset: number) => void;
+    varNames?: string[];
 }
 
 const grayCodes: Record<number, string[]> = {
@@ -25,7 +26,7 @@ function rotateArray<T>(arr: T[], offset: number): T[] {
     return [...arr.slice(len - normalizedOffset), ...arr.slice(0, len - normalizedOffset)];
 }
 
-export const KMap: React.FC<KMapProps> = ({ numVars, grid, onToggle, showIndices, rowOffset, colOffset, groups, onRowOffsetChange, onColOffsetChange }) => {
+export const KMap: React.FC<KMapProps> = ({ numVars, grid, onToggle, showIndices, rowOffset, colOffset, groups, onRowOffsetChange, onColOffsetChange, varNames }) => {
     let rowVarsCount = 1, colVarsCount = 1;
     if (numVars === 3) { colVarsCount = 2; }
     else if (numVars === 4) { rowVarsCount = 2; colVarsCount = 2; }
@@ -37,7 +38,7 @@ export const KMap: React.FC<KMapProps> = ({ numVars, grid, onToggle, showIndices
     const colGray = rotateArray(grayCodes[colVarsCount], colOffset);
     const rowGray = rotateArray(grayCodes[rowVarsCount], rowOffset);
 
-    const vars = "ABCDE".substring(0, numVars);
+    const vars = varNames ? varNames.join('') : "ABCDE".substring(0, numVars);
     const rowVars = vars.substring(0, rowVarsCount);
     const colVars = vars.substring(rowVarsCount);
 

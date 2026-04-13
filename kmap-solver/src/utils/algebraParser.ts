@@ -45,7 +45,9 @@ export class BooleanParser {
     }
 
     parse(input: string): ASTNode {
-        this.tokens = this.tokenize(input);
+        // Strip optional "F =" or "Y =" at the beginning
+        const cleanedInput = input.replace(/^[a-zA-Z]\s*=\s*/, '');
+        this.tokens = this.tokenize(cleanedInput);
         this.pos = 0;
         return this.parseExpression();
     }

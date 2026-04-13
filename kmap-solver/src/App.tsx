@@ -10,10 +10,13 @@ import { BooleanParser, evaluateAST, simplifyStepByStep, renderAST, nodesEqual, 
 import { KMap } from './components/KMap';
 import { TruthTable } from './components/TruthTable';
 import { LogicCircuit } from './components/LogicCircuit';
+import { CMOSCircuit } from './components/CMOSCircuit';
+import MuxImplementation from './components/MuxImplementation';
 import { BinaryEducation } from './components/BinaryEducation';
+import { AdderEducation } from './components/AdderEducation';
 
 export default function App() {
-    const [activeTab, setActiveTab] = useState<'kmap' | 'binary'>('kmap');
+    const [activeTab, setActiveTab] = useState<'kmap' | 'binary' | 'adder'>('kmap');
     const [numVars, setNumVars] = useState(4);
     const [mode, setMode] = useState<'SOP' | 'POS'>('SOP');
     const [grid, setGrid] = useState<number[]>(new Array(16).fill(0));
@@ -21,11 +24,13 @@ export default function App() {
     const [showTruthTable, setShowTruthTable] = useState(false);
     const [showAlgebra, setShowAlgebra] = useState(false);
     const [showCircuit, setShowCircuit] = useState(false);
-    const [circuitType, setCircuitType] = useState<'simplified' | 'canonical'>('simplified');
+    const [showCMOS, setShowCMOS] = useState(false);
+    const [circuitType, setCircuitType] = useState<'simplified' | 'canonical' | 'raw'>('simplified');
     const [showCircuitEquations, setShowCircuitEquations] = useState(false);
     const [rowOffset, setRowOffset] = useState(0);
     const [colOffset, setColOffset] = useState(0);
     const [algebraInput, setAlgebraInput] = useState('');
+    const [rawAST, setRawAST] = useState<any>(null);
     const [algebraSteps, setAlgebraSteps] = useState<any[]>([]);
     const [algebraError, setAlgebraError] = useState('');
     const [showStandardForms, setShowStandardForms] = useState(true);
@@ -33,6 +38,8 @@ export default function App() {
     const [maxtermsInput, setMaxtermsInput] = useState('');
     const [dontCaresInput, setDontCaresInput] = useState('');
     const [showUniversalGates, setShowUniversalGates] = useState(false);
+    const [showMux, setShowMux] = useState(false);
+    const [muxSize, setMuxSize] = useState<number>(4);
     const [isDarkMode, setIsDarkMode] = useState(() => {
         if (typeof window !== 'undefined') {
             return window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -134,6 +141,7 @@ export default function App() {
             setAlgebraError('');
             const parser = new BooleanParser();
             const ast = parser.parse(algebraInput);
+            setRawAST(ast);
 
             const vars = new Set<string>();
             const traverse = (node: any) => {
@@ -272,6 +280,12 @@ export default function App() {
                     >
                         Binary Education
                     </button>
+                    <button 
+                        onClick={() => setActiveTab('adder')}
+                        className={`px-6 py-2 rounded-md font-semibold transition-colors ${activeTab === 'adder' ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
+                    >
+                        Adder Circuits
+                    </button>
                 </div>
 
                 {activeTab === 'kmap' ? (
@@ -301,9 +315,28 @@ export default function App() {
                     <button onClick={() => setShowIndices(!showIndices)} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-md transition-colors">Toggle Indices</button>
                     <button onClick={() => setShowTruthTable(!showTruthTable)} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-md transition-colors">Toggle Truth Table</button>
                     <button onClick={() => setShowCircuit(!showCircuit)} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-md transition-colors">Toggle Circuit</button>
+                    <button onClick={() => setShowCMOS(!showCMOS)} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-md transition-colors">Toggle CMOS Circuit</button>
                     <button onClick={() => setShowStandardForms(!showStandardForms)} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-md transition-colors">Toggle Standard Forms</button>
                     <button onClick={() => setShowUniversalGates(!showUniversalGates)} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-md transition-colors">Toggle Universal Gates</button>
-                    <button onClick={() => setShowAlgebra(!showAlgebra)} className="px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 rounded-md transition-colors">Boolean Algebra Solver</button>
+                    <button onClick={() => setShowMux(!showMux)} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-md transition-colors">Toggle Multiplexer</button>
+                    <button onClick={() => setShowAlgebra(!showAlgebra)} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-md transition-colors">Toggle Boolean Algebra Steps</button>
+                </div>
+
+                <div className="w-full max-w-3xl bg-white dark:bg-slate-800 p-6 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm mb-8 transition-colors">
+                    <h3 className="text-xl font-semibold mb-2 text-slate-800 dark:text-gray-100">Input Expression / Equation</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Enter a boolean expression (e.g., <code>F = A'(B'C+D')</code> or <code>A + B'C</code>). This will map it to the K-Map and can be used for the circuits.</p>
+                    <div className="flex gap-2 mb-4">
+                        <input
+                            type="text"
+                            value={algebraInput}
+                            onChange={(e) => setAlgebraInput(e.target.value)}
+                            placeholder="Enter expression (e.g., A + B'C)"
+                            className="flex-1 p-2 border border-slate-300 dark:border-slate-600 rounded-md font-mono bg-white dark:bg-slate-900 text-slate-800 dark:text-gray-100 placeholder-slate-400 dark:placeholder-slate-500"
+                            onKeyDown={(e) => e.key === 'Enter' && handleSolveAlgebra()}
+                        />
+                        <button onClick={handleSolveAlgebra} className="px-4 py-2 bg-green-500 text-white hover:bg-green-600 rounded-md transition-colors">Solve & Map</button>
+                    </div>
+                    {algebraError && <div className="text-red-500 dark:text-red-400 mb-4">{algebraError}</div>}
                 </div>
 
                 {showStandardForms && (
@@ -362,21 +395,9 @@ export default function App() {
                     </div>
                 )}
 
-                {showAlgebra && (
+                {showAlgebra && algebraSteps.length > 0 && (
                     <div className="w-full max-w-3xl bg-white dark:bg-slate-800 p-6 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm mb-8 transition-colors">
-                        <h3 className="text-xl font-semibold mb-4 text-slate-800 dark:text-gray-100">Boolean Algebra Solver</h3>
-                        <div className="flex gap-2 mb-4">
-                            <input
-                                type="text"
-                                value={algebraInput}
-                                onChange={(e) => setAlgebraInput(e.target.value)}
-                                placeholder="Enter expression (e.g., A + B'C)"
-                                className="flex-1 p-2 border border-slate-300 dark:border-slate-600 rounded-md font-mono bg-white dark:bg-slate-900 text-slate-800 dark:text-gray-100 placeholder-slate-400 dark:placeholder-slate-500"
-                                onKeyDown={(e) => e.key === 'Enter' && handleSolveAlgebra()}
-                            />
-                            <button onClick={handleSolveAlgebra} className="px-4 py-2 bg-green-500 text-white hover:bg-green-600 rounded-md transition-colors">Solve & Map</button>
-                        </div>
-                        {algebraError && <div className="text-red-500 dark:text-red-400 mb-4">{algebraError}</div>}
+                        <h3 className="text-xl font-semibold mb-4 text-slate-800 dark:text-gray-100">Boolean Algebra Simplification Steps</h3>
                         <div className="flex flex-col gap-2 max-h-96 overflow-y-auto bg-gray-50 dark:bg-slate-900 p-4 rounded-md border border-slate-200 dark:border-slate-700 transition-colors">
                             {algebraSteps.map((step, i) => (
                                 <div key={i} className="p-2 border-b border-slate-200 dark:border-slate-700 last:border-0 font-mono text-slate-800 dark:text-gray-200">
@@ -475,18 +496,83 @@ export default function App() {
                                     >
                                         Canonical
                                     </button>
+                                    <button 
+                                        onClick={() => setCircuitType('raw')}
+                                        disabled={!rawAST}
+                                        className={`px-3 py-1 text-sm rounded-sm transition-colors ${circuitType === 'raw' ? 'bg-white dark:bg-slate-800 shadow-sm font-medium text-slate-800 dark:text-gray-100' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'} disabled:opacity-50 disabled:cursor-not-allowed`}
+                                        title={!rawAST ? "Enter an expression above first" : "Use raw input expression"}
+                                    >
+                                        Raw Equation
+                                    </button>
                                 </div>
                             </div>
                         </div>
                         <LogicCircuit 
-                            ast={circuitType === 'simplified' ? new BooleanParser().parse(solution.equation) : getCanonicalAST(grid, numVars, mode)} 
+                            ast={circuitType === 'raw' && rawAST ? rawAST : circuitType === 'simplified' ? new BooleanParser().parse(solution.equation) : getCanonicalAST(grid, numVars, mode)} 
                             showEquation={showCircuitEquations} 
                         />
                     </div>
                 )}
+
+                {showCMOS && (
+                    <div className="w-full bg-gray-50 dark:bg-slate-900 p-6 rounded-lg border border-slate-200 dark:border-slate-700 mb-8 flex flex-col items-center transition-colors">
+                        <div className="flex justify-between items-center w-full mb-4">
+                            <h3 className="text-xl font-semibold text-slate-800 dark:text-gray-100">CMOS Circuit</h3>
+                            <div className="flex bg-slate-200 dark:bg-slate-700 rounded-md p-1 transition-colors">
+                                <button 
+                                    onClick={() => setCircuitType('simplified')}
+                                    className={`px-3 py-1 text-sm rounded-sm transition-colors ${circuitType === 'simplified' ? 'bg-white dark:bg-slate-800 shadow-sm font-medium text-slate-800 dark:text-gray-100' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
+                                >
+                                    Simplified
+                                </button>
+                                <button 
+                                    onClick={() => setCircuitType('canonical')}
+                                    className={`px-3 py-1 text-sm rounded-sm transition-colors ${circuitType === 'canonical' ? 'bg-white dark:bg-slate-800 shadow-sm font-medium text-slate-800 dark:text-gray-100' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
+                                >
+                                    Canonical
+                                </button>
+                                <button 
+                                    onClick={() => setCircuitType('raw')}
+                                    disabled={!rawAST}
+                                    className={`px-3 py-1 text-sm rounded-sm transition-colors ${circuitType === 'raw' ? 'bg-white dark:bg-slate-800 shadow-sm font-medium text-slate-800 dark:text-gray-100' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'} disabled:opacity-50 disabled:cursor-not-allowed`}
+                                    title={!rawAST ? "Enter an expression above first" : "Use raw input expression"}
+                                >
+                                    Raw Equation
+                                </button>
+                            </div>
+                        </div>
+                        <CMOSCircuit 
+                            ast={circuitType === 'raw' && rawAST ? rawAST : circuitType === 'simplified' ? new BooleanParser().parse(solution.equation) : getCanonicalAST(grid, numVars, mode)} 
+                        />
+                    </div>
+                )}
+
+                {showMux && (
+                    <div className="w-full bg-gray-50 dark:bg-slate-900 p-6 rounded-lg border border-slate-200 dark:border-slate-700 mb-8 flex flex-col items-center transition-colors">
+                        <div className="flex justify-between items-center w-full mb-4">
+                            <h3 className="text-xl font-semibold text-slate-800 dark:text-gray-100">Multiplexer Implementation</h3>
+                            <div className="flex items-center gap-2">
+                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">MUX Size:</label>
+                                <select 
+                                    value={muxSize} 
+                                    onChange={(e) => setMuxSize(Number(e.target.value))}
+                                    className="p-1 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-slate-800 dark:text-gray-100"
+                                >
+                                    {Array.from({ length: numVars }).map((_, i) => {
+                                        const size = Math.pow(2, i + 1);
+                                        return <option key={size} value={size}>{size}:1 MUX</option>
+                                    })}
+                                </select>
+                            </div>
+                        </div>
+                        <MuxImplementation grid={grid} numVars={numVars} muxSize={muxSize} mode={mode} />
+                    </div>
+                )}
                     </>
-                ) : (
+                ) : activeTab === 'binary' ? (
                     <BinaryEducation />
+                ) : (
+                    <AdderEducation />
                 )}
             </div>
         </div>

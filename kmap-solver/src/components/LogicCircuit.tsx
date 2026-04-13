@@ -113,7 +113,7 @@ const Gate: React.FC<{ node: CNode, showEquation: boolean }> = ({ node, showEqua
     );
 }
 
-export const LogicCircuit = ({ ast, showEquation }: { ast: ASTNode | null, showEquation: boolean }) => {
+export const LogicCircuit = ({ ast, showEquation, transparent = false }: { ast: ASTNode | null, showEquation: boolean, transparent?: boolean }) => {
     const { root, width, height } = useMemo(() => {
         if (!ast) return { root: null, width: 0, height: 0 };
         let counter = 0;
@@ -152,6 +152,15 @@ export const LogicCircuit = ({ ast, showEquation }: { ast: ASTNode | null, showE
     edges.push(
         <path key="final-out" d={`M ${finalOut.x} ${finalOut.y} L ${finalOut.x + 30} ${finalOut.y}`} fill="none" className="stroke-slate-400 dark:stroke-slate-500" strokeWidth="2" />
     );
+    
+    if (transparent) {
+        return (
+            <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
+                {edges}
+                {nodes}
+            </svg>
+        );
+    }
     
     return (
         <div className="overflow-auto border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 p-4 shadow-sm w-full transition-colors">
