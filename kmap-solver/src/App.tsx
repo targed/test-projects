@@ -14,9 +14,13 @@ import { CMOSCircuit } from './components/CMOSCircuit';
 import MuxImplementation from './components/MuxImplementation';
 import { BinaryEducation } from './components/BinaryEducation';
 import { AdderEducation } from './components/AdderEducation';
+import { PLATab } from './components/PLATab';
+import { DecoderTab } from './components/DecoderTab';
+import { FSMTab } from './components/FSMTab';
+import { ROMTab } from './components/ROMTab';
 
 export default function App() {
-    const [activeTab, setActiveTab] = useState<'kmap' | 'binary' | 'adder'>('kmap');
+    const [activeTab, setActiveTab] = useState<'kmap' | 'binary' | 'adder' | 'pla' | 'decoder' | 'fsm' | 'rom'>('kmap');
     const [numVars, setNumVars] = useState(4);
     const [mode, setMode] = useState<'SOP' | 'POS'>('SOP');
     const [grid, setGrid] = useState<number[]>(new Array(16).fill(0));
@@ -285,6 +289,30 @@ export default function App() {
                         className={`px-6 py-2 rounded-md font-semibold transition-colors ${activeTab === 'adder' ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
                     >
                         Adder Circuits
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('pla')}
+                        className={`px-6 py-2 rounded-md font-semibold transition-colors ${activeTab === 'pla' ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
+                    >
+                        PLA
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('decoder')}
+                        className={`px-6 py-2 rounded-md font-semibold transition-colors ${activeTab === 'decoder' ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
+                    >
+                        Decoder
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('fsm')}
+                        className={`px-6 py-2 rounded-md font-semibold transition-colors ${activeTab === 'fsm' ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
+                    >
+                        Finite State Machine
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('rom')}
+                        className={`px-6 py-2 rounded-md font-semibold transition-colors ${activeTab === 'rom' ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
+                    >
+                        ROM Circuits
                     </button>
                 </div>
 
@@ -571,8 +599,16 @@ export default function App() {
                     </>
                 ) : activeTab === 'binary' ? (
                     <BinaryEducation />
-                ) : (
+                ) : activeTab === 'adder' ? (
                     <AdderEducation />
+                ) : activeTab === 'pla' ? (
+                    <PLATab />
+                ) : activeTab === 'decoder' ? (
+                    <DecoderTab />
+                ) : activeTab === 'fsm' ? (
+                    <FSMTab />
+                ) : (
+                    <ROMTab />
                 )}
             </div>
         </div>
