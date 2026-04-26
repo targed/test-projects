@@ -15,7 +15,14 @@ interface FSMTransition {
 }
 
 export function FSMTab() {
+    const [tabMode, setTabMode] = useState<'pattern' | 'manual'>('pattern');
     const [pattern, setPattern] = useState('0011');
+    const [numManualBits, setNumManualBits] = useState(3);
+    const [numManualInputs, setNumManualInputs] = useState(1);
+    const [manualData, setManualData] = useState<Record<string, { qNext: number | -1; out: number | -1 }>>({});
+    const [sequenceInput, setSequenceInput] = useState('');
+    const [sequenceTargetInput, setSequenceTargetInput] = useState(0);
+
     const [machineType, setMachineType] = useState<MachineType>('Mealy');
     const [ffType, setFfType] = useState<FFType>('JK');
     const [allowOverlaps, setAllowOverlaps] = useState(true);
@@ -26,83 +33,113 @@ export function FSMTab() {
         return pattern.replace(/[^01]/g, '').slice(0, 8);
     }, [pattern]);
 
-    const { numStates, numBits, numVars, transitions, invalidStates } = useMemo(() => {
-        if (!validPattern) return { numStates: 0, numBits: 0, numVars: 0, transitions: [], invalidStates: [] };
+    const { numStates, numBits, finalNumInputs, numVars, transitions, invalidStates } = useMemo(() => {
+        if (tabMode === 'pattern') {
+            if (!validPattern) return { numStates: 0, numBits: 0, finalNumInputs: 1, numVars: 0, transitions: [], invalidStates: [] };
 
-        const L = validPattern.length;
-        const numStates = machineType === 'Mealy' ? L : L + 1;
-        const numBits = Math.max(1, Math.ceil(Math.log2(numStates)));
-        const numVars = numBits + 1; // Qs + X
+            const L = validPattern.length;
+            const numStates = machineType === 'Mealy' ? L : L + 1;
+            const numBits = Math.max(1, Math.ceil(Math.log2(numStates)));
+            const numVars = numBits + 1; // Qs + X
 
-        const transitions: FSMTransition[] = [];
+            const transitions: FSMTransition[] = [];
 
-        for (let i = 0; i < numStates; i++) {
-            for (let x = 0; x <= 1; x++) {
-                const currentMatched = validPattern.slice(0, i);
-                const s = currentMatched + x.toString();
-                
-                let nextState = 0;
-                let output = 0;
+            for (let i = 0; i < numStates; i++) {
+                for (let x = 0; x <= 1; x++) {
+                    const currentMatched = validPattern.slice(0, i);
+                    const s = currentMatched + x.toString();
+                    
+                    let nextState = 0;
+                    let output = 0;
 
-                if (machineType === 'Mealy') {
-                    if (s === validPattern) {
-                        output = 1;
-                        if (allowOverlaps) {
-                            // Find longest prefix of pattern that is suffix of s
-                            for (let k = L - 1; k > 0; k--) {
+                    if (machineType === 'Mealy') {
+                        if (s === validPattern) {
+                            output = 1;
+                            if (allowOverlaps) {
+                                // Find longest prefix of pattern that is suffix of s
+                                for (let k = L - 1; k > 0; k--) {
+                                    if (s.endsWith(validPattern.slice(0, k))) {
+                                        nextState = k;
+                                        break;
+                                    }
+                                }
+                            } else {
+                                nextState = 0;
+                            }
+                        } else {
+                            output = 0;
+                            for (let k = i + 1; k > 0; k--) {
+                                if (k <= L && s.endsWith(validPattern.slice(0, k))) {
+                                    nextState = k;
+                                    break;
+                                }
+                            }
+                        }
+                    } else {
+                        if (!allowOverlaps && i === L) {
+                            nextState = validPattern[0] === x.toString() ? 1 : 0;
+                        } else {
+                            for (let k = Math.min(L, i + 1); k > 0; k--) {
                                 if (s.endsWith(validPattern.slice(0, k))) {
                                     nextState = k;
                                     break;
                                 }
                             }
-                        } else {
-                            nextState = 0;
                         }
-                    } else {
-                        output = 0;
-                        for (let k = i + 1; k > 0; k--) {
-                            if (k <= L && s.endsWith(validPattern.slice(0, k))) {
-                                nextState = k;
-                                break;
-                            }
-                        }
+                        output = i === L ? 1 : 0;
                     }
-                } else {
-                    // Moore
-                    // Output depends only on state, handled separately, but we can store it in transition for convenience
-                    // Actually, in Moore, output is 1 if i == L.
-                    // Wait, the transition output here can just be the next state's output or we can ignore it.
-                    // Let's compute next state
-                    if (!allowOverlaps && i === L) {
-                        // If in final state and no overlaps, we only match prefix of just the input `x`
-                        nextState = validPattern[0] === x.toString() ? 1 : 0;
-                    } else {
-                        for (let k = Math.min(L, i + 1); k > 0; k--) {
-                            if (s.endsWith(validPattern.slice(0, k))) {
-                                nextState = k;
-                                break;
-                            }
-                        }
-                    }
-                    output = i === L ? 1 : 0;
-                }
 
-                transitions.push({
-                    currentState: i,
-                    input: x,
-                    nextState,
-                    output
-                });
+                    transitions.push({
+                        currentState: i,
+                        input: x,
+                        nextState,
+                        output
+                    });
+                }
+            }
+
+            const invalidStates = [];
+            for (let i = numStates; i < Math.pow(2, numBits); i++) {
+                invalidStates.push(i);
+            }
+
+            return { numStates, numBits, finalNumInputs: 1, numVars, transitions, invalidStates };
+        } else {
+            // Manual Mode
+            const numBits = numManualBits;
+            const numStates = Math.pow(2, numBits);
+            const numVars = numBits + numManualInputs;
+            
+            return { numStates, numBits, finalNumInputs: numManualInputs, numVars, transitions: [], invalidStates: [] };
+        }
+    }, [validPattern, machineType, allowOverlaps, tabMode, numManualBits, numManualInputs]);
+
+    const handleManualChange = (q: number, inputVal: number, field: 'qNext' | 'out', val: number) => {
+        const key = `${q}_${inputVal}`;
+        setManualData(prev => ({
+            ...prev,
+            [key]: {
+                ...({ qNext: -1, out: -1, ...(prev[key] || {}) }),
+                [field]: val
+            }
+        }));
+    };
+
+    const applySequence = () => {
+        const seq = sequenceInput.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+        if (seq.length < 2) return;
+
+        const newData = { ...manualData };
+        for (let i = 0; i < seq.length - 1; i++) {
+            const current = seq[i];
+            const next = seq[i + 1];
+            if (current < Math.pow(2, numBits)) {
+                const key = `${current}_${sequenceTargetInput}`;
+                newData[key] = { ...(newData[key] || { out: -1 }), qNext: next };
             }
         }
-
-        const invalidStates = [];
-        for (let i = numStates; i < Math.pow(2, numBits); i++) {
-            invalidStates.push(i);
-        }
-
-        return { numStates, numBits, numVars, transitions, invalidStates };
-    }, [validPattern, machineType, allowOverlaps]);
+        setManualData(newData);
+    };
 
     const getFFInputs = (q: number, qNext: number, type: FFType): string[] => {
         if (q === -1 || qNext === -1) {
@@ -127,15 +164,27 @@ export function FSMTab() {
     };
 
     const truthTable = useMemo(() => {
-        if (!validPattern) return [];
         const rows = [];
-        for (let q = 0; q < Math.pow(2, numBits); q++) {
-            for (let x = 0; x <= 1; x++) {
-                const isInvalid = invalidStates.includes(q);
-                const t = transitions.find(tr => tr.currentState === q && tr.input === x);
+        const numInputCombinations = Math.pow(2, finalNumInputs);
+        const numStatesTotal = Math.pow(2, numBits);
+
+        // Put Inputs as MSB if present for standard ordering
+        for (let x = 0; x < numInputCombinations; x++) {
+            for (let q = 0; q < numStatesTotal; q++) {
+                const isInvalid = tabMode === 'pattern' ? invalidStates.includes(q) : false;
                 
-                const qNext = isInvalid ? -1 : (t ? t.nextState : -1);
-                const out = isInvalid ? -1 : (machineType === 'Mealy' ? (t ? t.output : -1) : (q === numStates - 1 ? 1 : 0)); // For Moore, output is 1 if state is L
+                let qNext = -1;
+                let out = -1;
+
+                if (tabMode === 'pattern') {
+                    const t = transitions.find(tr => tr.currentState === q && tr.input === x);
+                    qNext = isInvalid ? -1 : (t ? t.nextState : -1);
+                    out = isInvalid ? -1 : (machineType === 'Mealy' ? (t ? t.output : -1) : (q === numStates - 1 ? 1 : 0));
+                } else {
+                    const entry = manualData[`${q}_${x}`] || { qNext: -1, out: -1 };
+                    qNext = entry.qNext;
+                    out = entry.out;
+                }
                 
                 const ffInputs = [];
                 for (let b = numBits - 1; b >= 0; b--) {
@@ -150,10 +199,11 @@ export function FSMTab() {
             }
         }
         return rows;
-    }, [numBits, transitions, invalidStates, machineType, ffType, numStates, validPattern]);
+    }, [numBits, finalNumInputs, transitions, invalidStates, machineType, ffType, numStates, validPattern, tabMode, manualData]);
 
     const equations = useMemo(() => {
-        if (!validPattern || numVars > 5) return [];
+        if (tabMode === 'pattern' && !validPattern) return [];
+        if (numVars > 5) return [];
         
         const solveKMap = (grid: number[]) => {
             const solver = new KMapSolver(numVars);
@@ -167,13 +217,12 @@ export function FSMTab() {
         // Output equation
         const outGrid = new Array(Math.pow(2, numVars)).fill(0);
         truthTable.forEach((row, i) => {
-            // KMap grid index: Qs then X
-            // row.q is Qs, row.x is X
-            const idx = (row.q << 1) | row.x;
+            // KMap grid index: Bits of X then bits of Q
+            const idx = (row.x << numBits) | row.q;
             outGrid[idx] = row.out === -1 ? 2 : row.out;
         });
         const outSol = solveKMap(outGrid);
-        eqs.push({ name: machineType === 'Mealy' ? 'F' : 'F (Output)', eq: outSol.eq, groups: outSol.groups, grid: outSol.grid });
+        eqs.push({ name: machineType === 'Mealy' || tabMode === 'manual' ? 'F' : 'F (Output)', eq: outSol.eq, groups: outSol.groups, grid: outSol.grid });
 
         // FF equations
         for (let b = numBits - 1; b >= 0; b--) {
@@ -181,7 +230,7 @@ export function FSMTab() {
             if (ffType === 'D' || ffType === 'T') {
                 const grid = new Array(Math.pow(2, numVars)).fill(0);
                 truthTable.forEach(row => {
-                    const idx = (row.q << 1) | row.x;
+                    const idx = (row.x << numBits) | row.q;
                     const val = parseInt(row.ffInputs[bitIdx][0]);
                     grid[idx] = isNaN(val) ? 2 : val;
                 });
@@ -191,7 +240,7 @@ export function FSMTab() {
                 const grid1 = new Array(Math.pow(2, numVars)).fill(0);
                 const grid2 = new Array(Math.pow(2, numVars)).fill(0);
                 truthTable.forEach(row => {
-                    const idx = (row.q << 1) | row.x;
+                    const idx = (row.x << numBits) | row.q;
                     const val1 = parseInt(row.ffInputs[bitIdx][0]);
                     const val2 = parseInt(row.ffInputs[bitIdx][1]);
                     grid1[idx] = isNaN(val1) ? 2 : val1;
@@ -199,13 +248,15 @@ export function FSMTab() {
                 });
                 const sol1 = solveKMap(grid1);
                 const sol2 = solveKMap(grid2);
-                eqs.push({ name: `${ffType === 'SR' ? 'S' : 'J'}${b}`, eq: sol1.eq, groups: sol1.groups, grid: sol1.grid });
-                eqs.push({ name: `${ffType === 'SR' ? 'R' : 'K'}${b}`, eq: sol2.eq, groups: sol2.groups, grid: sol2.grid });
+                const name1 = ffType === 'SR' ? 'S' : 'J';
+                const name2 = ffType === 'SR' ? 'R' : 'K';
+                eqs.push({ name: `${name1}${b}`, eq: sol1.eq, groups: sol1.groups, grid: sol1.grid });
+                eqs.push({ name: `${name2}${b}`, eq: sol2.eq, groups: sol2.groups, grid: sol2.grid });
             }
         }
 
         return eqs;
-    }, [truthTable, numVars, numBits, ffType, machineType, validPattern]);
+    }, [truthTable, numVars, numBits, finalNumInputs, ffType, machineType, validPattern, tabMode]);
 
     const renderStateDiagram = () => {
         if (!validPattern) return null;
@@ -363,32 +414,77 @@ export function FSMTab() {
 
     return (
         <div className="max-w-6xl mx-auto">
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-6">Finite State Machine Designer</h2>
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Finite State Machine Designer</h2>
+                <div className="flex bg-slate-200 dark:bg-slate-700 p-1 rounded-lg">
+                    <button 
+                        onClick={() => setTabMode('pattern')}
+                        className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tabMode === 'pattern' ? 'bg-white dark:bg-slate-800 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400'}`}
+                    >
+                        Pattern Matcher
+                    </button>
+                    <button 
+                        onClick={() => setTabMode('manual')}
+                        className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tabMode === 'manual' ? 'bg-white dark:bg-slate-800 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400'}`}
+                    >
+                        Counter / Manual
+                    </button>
+                </div>
+            </div>
             
             <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-xl mb-8 border border-slate-200 dark:border-slate-700">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Pattern to Find</label>
-                        <input 
-                            type="text" 
-                            value={pattern} 
-                            onChange={(e) => setPattern(e.target.value)}
-                            className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-mono"
-                            placeholder="0011"
-                            maxLength={8}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Machine Type</label>
-                        <select 
-                            value={machineType} 
-                            onChange={(e) => setMachineType(e.target.value as MachineType)}
-                            className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-                        >
-                            <option value="Mealy">Mealy Machine</option>
-                            <option value="Moore">Moore Machine</option>
-                        </select>
-                    </div>
+                    {tabMode === 'pattern' ? (
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Pattern to Find</label>
+                            <input 
+                                type="text" 
+                                value={pattern} 
+                                onChange={(e) => setPattern(e.target.value)}
+                                className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-mono"
+                                placeholder="0011"
+                                maxLength={8}
+                            />
+                        </div>
+                    ) : (
+                        <>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">State Bits (Q)</label>
+                                <select 
+                                    value={numManualBits} 
+                                    onChange={(e) => setNumManualBits(parseInt(e.target.value))}
+                                    className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                                >
+                                    {[1, 2, 3, 4].map(n => <option key={n} value={n}>{n} Bits (Q{n-1}..Q0)</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Inputs (X)</label>
+                                <select 
+                                    value={numManualInputs} 
+                                    onChange={(e) => setNumManualInputs(parseInt(e.target.value))}
+                                    className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                                >
+                                    {[0, 1, 2, 3].map(n => <option key={n} value={n}>{n} Inputs</option>)}
+                                </select>
+                            </div>
+                        </>
+                    )}
+                    
+                    {tabMode === 'pattern' && (
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Machine Type</label>
+                            <select 
+                                value={machineType} 
+                                onChange={(e) => setMachineType(e.target.value as MachineType)}
+                                className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                            >
+                                <option value="Mealy">Mealy Machine</option>
+                                <option value="Moore">Moore Machine</option>
+                            </select>
+                        </div>
+                    )}
+                    
                     <div>
                         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Flip-Flop Type</label>
                         <select 
@@ -402,16 +498,19 @@ export function FSMTab() {
                             <option value="JK">JK Flip-Flop</option>
                         </select>
                     </div>
+                    
                     <div className="flex flex-col justify-center gap-3 mt-4 lg:mt-0">
-                        <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-300">
-                            <input 
-                                type="checkbox" 
-                                checked={allowOverlaps}
-                                onChange={(e) => setAllowOverlaps(e.target.checked)}
-                                className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                            />
-                            Allow Overlapping Patterns
-                        </label>
+                        {tabMode === 'pattern' && (
+                            <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-300">
+                                <input 
+                                    type="checkbox" 
+                                    checked={allowOverlaps}
+                                    onChange={(e) => setAllowOverlaps(e.target.checked)}
+                                    className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                />
+                                Allow Overlapping Patterns
+                            </label>
+                        )}
                         <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-300">
                             <input 
                                 type="checkbox" 
@@ -421,28 +520,59 @@ export function FSMTab() {
                             />
                             Show FF Tables
                         </label>
-                        <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-300">
-                            <input 
-                                type="checkbox" 
-                                checked={showCircuit}
-                                onChange={(e) => setShowCircuit(e.target.checked)}
-                                className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                            />
-                            Draw Circuit
-                        </label>
                     </div>
                 </div>
+
+                {tabMode === 'manual' && (
+                    <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Apply Sequence</label>
+                        <div className="flex gap-2 flex-wrap items-center">
+                            <div className="flex-1 min-w-[200px]">
+                                <input 
+                                    type="text" 
+                                    value={sequenceInput}
+                                    onChange={(e) => setSequenceInput(e.target.value)}
+                                    className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-mono text-sm"
+                                    placeholder="e.g. 4, 3, 2, 1, 0"
+                                />
+                            </div>
+                            {finalNumInputs > 0 && (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">for input value:</span>
+                                    <select 
+                                        value={sequenceTargetInput}
+                                        onChange={(e) => setSequenceTargetInput(parseInt(e.target.value))}
+                                        className="p-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm"
+                                    >
+                                        {Array.from({ length: Math.pow(2, finalNumInputs) }).map((_, i) => (
+                                            <option key={i} value={i}>{i.toString(2).padStart(finalNumInputs, '0')}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+                            <button 
+                                onClick={applySequence}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                            >
+                                Apply
+                            </button>
+                        </div>
+                        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Enter a comma-separated list of states to automatically set the Next State column. This will overwrite existing next state values for the specified input combination.</p>
+                    </div>
+                )}
                 
                 {renderFFTables()}
             </div>
 
-            {validPattern && (
+            {(tabMode === 'manual' || validPattern) && (
                 <div className="space-y-8">
                     {/* State Diagram */}
-                    <div>
-                        <h3 className="text-xl font-semibold text-slate-800 dark:text-white mb-4">State Diagram</h3>
-                        {renderStateDiagram()}
-                    </div>
+                    {tabMode === 'pattern' && (
+                        <div>
+                            <h3 className="text-xl font-semibold text-slate-800 dark:text-white mb-4">State Diagram</h3>
+                            {renderStateDiagram()}
+                        </div>
+                    )}
 
                     {/* Truth Table */}
                     <div>
@@ -451,15 +581,16 @@ export function FSMTab() {
                             <table className="w-full text-sm text-center text-slate-600 dark:text-slate-300">
                                 <thead className="text-xs text-slate-700 uppercase bg-slate-100 dark:bg-slate-900 dark:text-slate-300">
                                     <tr>
+                                        <th className="px-4 py-3 border-r dark:border-slate-700" colSpan={Math.max(1, finalNumInputs)}>Input (X)</th>
                                         <th className="px-4 py-3 border-r dark:border-slate-700" colSpan={numBits}>Current State (Q)</th>
-                                        <th className="px-4 py-3 border-r dark:border-slate-700">Input (X)</th>
                                         <th className="px-4 py-3 border-r dark:border-slate-700" colSpan={numBits}>Next State (Q*)</th>
                                         <th className="px-4 py-3 border-r dark:border-slate-700" colSpan={numBits * (ffType === 'D' || ffType === 'T' ? 1 : 2)}>FF Inputs</th>
                                         <th className="px-4 py-3">Output (F)</th>
                                     </tr>
                                     <tr className="border-b dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                                        {finalNumInputs === 0 ? <th className="px-2 py-2 border-r dark:border-slate-700 font-mono">-</th> : 
+                                         Array.from({length: finalNumInputs}).map((_, i) => <th key={`x-${i}`} className="px-2 py-2 font-mono">{finalNumInputs > 1 ? `X${finalNumInputs - 1 - i}` : 'X'}</th>)}
                                         {Array.from({length: numBits}).map((_, i) => <th key={`q-${i}`} className="px-2 py-2 font-mono">Q{numBits - 1 - i}</th>)}
-                                        <th className="px-2 py-2 border-r dark:border-slate-700 font-mono">X</th>
                                         {Array.from({length: numBits}).map((_, i) => <th key={`qn-${i}`} className="px-2 py-2 font-mono">Q*{numBits - 1 - i}</th>)}
                                         {Array.from({length: numBits}).map((_, i) => {
                                             const b = numBits - 1 - i;
@@ -477,20 +608,58 @@ export function FSMTab() {
                                 <tbody>
                                     {truthTable.map((row, i) => (
                                         <tr key={i} className="border-b dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                                            {finalNumInputs === 0 ? <td className="px-2 py-2 border-r dark:border-slate-700 font-mono text-slate-400">None</td> : 
+                                             Array.from({length: finalNumInputs}).map((_, j) => (
+                                                <td key={`x-${j}`} className="px-2 py-2 font-mono font-bold text-blue-600 dark:text-blue-400">{(row.x >> (finalNumInputs - 1 - j)) & 1}</td>
+                                            ))}
                                             {Array.from({length: numBits}).map((_, j) => (
                                                 <td key={`q-${j}`} className="px-2 py-2 font-mono">{(row.q >> (numBits - 1 - j)) & 1}</td>
                                             ))}
-                                            <td className="px-2 py-2 border-r dark:border-slate-700 font-mono font-bold text-blue-600 dark:text-blue-400">{row.x}</td>
-                                            {Array.from({length: numBits}).map((_, j) => (
-                                                <td key={`qn-${j}`} className="px-2 py-2 font-mono">{row.isInvalid ? 'X' : (row.qNext >> (numBits - 1 - j)) & 1}</td>
-                                            ))}
+                                            
+                                            {/* Next State Editable Column */}
+                                            
+                                            {/* Next State Editable Column */}
+                                            {tabMode === 'manual' ? (
+                                                <td className="px-2 py-2 font-mono bg-blue-50/50 dark:bg-blue-900/10" colSpan={numBits}>
+                                                    <select 
+                                                        value={row.qNext}
+                                                        onChange={(e) => handleManualChange(row.q, row.x, 'qNext', parseInt(e.target.value))}
+                                                        className="bg-transparent border-none focus:ring-0 text-center w-full font-bold"
+                                                    >
+                                                        <option value={-1}>Don't Care (X)</option>
+                                                        {Array.from({ length: Math.pow(2, numBits) }).map((_, n) => (
+                                                            <option key={n} value={n}>{n} ({n.toString(2).padStart(numBits, '0')})</option>
+                                                        ))}
+                                                    </select>
+                                                </td>
+                                            ) : (
+                                                <>
+                                                    {Array.from({length: numBits}).map((_, j) => (
+                                                        <td key={`qn-${j}`} className="px-2 py-2 font-mono">{row.isInvalid ? 'X' : (row.qNext >> (numBits - 1 - j)) & 1}</td>
+                                                    ))}
+                                                </>
+                                            )}
+
                                             {row.ffInputs.map((ff, j) => (
                                                 <React.Fragment key={`ff-${j}`}>
                                                     <td className="px-2 py-2 font-mono text-orange-600 dark:text-orange-400">{ff[0] === '2' ? 'X' : ff[0]}</td>
                                                     {ff.length > 1 && <td className="px-2 py-2 font-mono text-orange-600 dark:text-orange-400">{ff[1] === '2' ? 'X' : ff[1]}</td>}
                                                 </React.Fragment>
                                             ))}
-                                            <td className="px-2 py-2 font-mono font-bold text-green-600 dark:text-green-400">{row.out === -1 ? 'X' : row.out}</td>
+
+                                            {/* Output Editable Column */}
+                                            {tabMode === 'manual' ? (
+                                                <td className="px-2 py-2 font-mono bg-green-50/50 dark:bg-green-900/10">
+                                                    <button 
+                                                        onClick={() => handleManualChange(row.q, row.x, 'out', row.out === 0 ? 1 : row.out === 1 ? -1 : 0)}
+                                                        className={`font-bold w-full h-full py-1 rounded transition-colors ${row.out === 1 ? 'text-green-600 dark:text-green-400' : row.out === 0 ? 'text-slate-400' : 'text-orange-500'}`}
+                                                    >
+                                                        {row.out === -1 ? 'X' : row.out}
+                                                    </button>
+                                                </td>
+                                            ) : (
+                                                <td className="px-2 py-2 font-mono font-bold text-green-600 dark:text-green-400">{row.out === -1 ? 'X' : row.out}</td>
+                                            )}
                                         </tr>
                                     ))}
                                 </tbody>
@@ -507,7 +676,13 @@ export function FSMTab() {
                                 for (let j = 0; j < numBits; j++) {
                                     varNames.push(`Q${numBits - 1 - j}`);
                                 }
-                                varNames.push('X');
+                                if (finalNumInputs === 1) {
+                                    varNames.push('X');
+                                } else {
+                                    for (let j = 0; j < finalNumInputs; j++) {
+                                        varNames.push(`X${finalNumInputs - 1 - j}`);
+                                    }
+                                }
 
                                 return (
                                     <div key={i} className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col items-center gap-6">
@@ -516,8 +691,11 @@ export function FSMTab() {
                                             <div className="font-mono text-xl text-blue-600 dark:text-blue-400 flex-1">
                                                 = {eq.eq === '0' || eq.eq === '1' ? eq.eq : eq.eq.replace(/([A-Z])/g, (match) => {
                                                     const varIdx = match.charCodeAt(0) - 65;
-                                                    if (varIdx === numVars - 1) return 'X';
-                                                    return `Q${numBits - 1 - varIdx}`;
+                                                    if (varIdx < finalNumInputs) {
+                                                        if (finalNumInputs === 1) return 'X';
+                                                        return `X${finalNumInputs - 1 - varIdx}`;
+                                                    }
+                                                    return `Q${numBits - 1 - (varIdx - finalNumInputs)}`;
                                                 })}
                                             </div>
                                         </div>
@@ -540,6 +718,22 @@ export function FSMTab() {
                             })}
                         </div>
                     </div>
+                    
+                    {/* Clear Button */}
+                    {tabMode === 'manual' && (
+                        <div className="flex justify-end mt-4">
+                            <button 
+                                onClick={() => {
+                                    if (confirm('Are you sure you want to clear all manual adjustments?')) {
+                                        setManualData({});
+                                    }
+                                }}
+                                className="px-4 py-2 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium"
+                            >
+                                Clear Manual Data
+                            </button>
+                        </div>
+                    )}
 
                     {/* Circuit Diagram */}
                     {showCircuit && (
@@ -554,7 +748,15 @@ export function FSMTab() {
                                         if (eq.eq === '0' || eq.eq === '1') return null;
                                         
                                         // Replace variables for the logic circuit parser
-                                        let parsedEq = eq.eq;
+                                        let parsedEq = eq.eq.replace(/([A-Z])/g, (match) => {
+                                            const varIdx = match.charCodeAt(0) - 65;
+                                            if (varIdx < finalNumInputs) {
+                                                if (finalNumInputs === 1) return 'X';
+                                                return `X${finalNumInputs - 1 - varIdx}`;
+                                            }
+                                            return `Q${numBits - 1 - (varIdx - finalNumInputs)}`;
+                                        });
+
                                         try {
                                             const ast = new BooleanParser().parse(parsedEq);
                                             return (

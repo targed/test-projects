@@ -18,9 +18,11 @@ import { PLATab } from './components/PLATab';
 import { DecoderTab } from './components/DecoderTab';
 import { FSMTab } from './components/FSMTab';
 import { ROMTab } from './components/ROMTab';
+import { RegisterTab } from './components/RegisterTab';
+import { FlipFlopGallery } from './components/FlipFlopGallery';
 
 export default function App() {
-    const [activeTab, setActiveTab] = useState<'kmap' | 'binary' | 'adder' | 'pla' | 'decoder' | 'fsm' | 'rom'>('kmap');
+    const [activeTab, setActiveTab] = useState<'kmap' | 'binary' | 'adder' | 'pla' | 'decoder' | 'fsm' | 'rom' | 'register' | 'flipflop'>('kmap');
     const [numVars, setNumVars] = useState(4);
     const [mode, setMode] = useState<'SOP' | 'POS'>('SOP');
     const [grid, setGrid] = useState<number[]>(new Array(16).fill(0));
@@ -226,7 +228,7 @@ export default function App() {
             return (
                 <div className="flex flex-col gap-4">
                     <h4 className="font-semibold text-slate-700 dark:text-slate-300">NAND-NAND Implementation</h4>
-                    <div className="flex flex-col gap-2 font-mono text-slate-800 dark:text-gray-200 bg-slate-100 dark:bg-slate-900 p-4 rounded-md">
+                    <div className="flex flex-col gap-2 font-mono text-slate-800 dark:text-gray-200 bg-slate-100 dark:bg-slate-900 p-4 rounded-md overflow-x-auto whitespace-nowrap">
                         <div><span className="text-slate-500">1. Original SOP:</span> F = {step1}</div>
                         <div><span className="text-slate-500">2. Double Negate:</span> F = {step2}</div>
                         <div><span className="text-slate-500">3. De Morgan's:</span> F = {step3}</div>
@@ -245,7 +247,7 @@ export default function App() {
             return (
                 <div className="flex flex-col gap-4">
                     <h4 className="font-semibold text-slate-700 dark:text-slate-300">NOR-NOR Implementation</h4>
-                    <div className="flex flex-col gap-2 font-mono text-slate-800 dark:text-gray-200 bg-slate-100 dark:bg-slate-900 p-4 rounded-md">
+                    <div className="flex flex-col gap-2 font-mono text-slate-800 dark:text-gray-200 bg-slate-100 dark:bg-slate-900 p-4 rounded-md overflow-x-auto whitespace-nowrap">
                         <div><span className="text-slate-500">1. Original POS:</span> F = {step1}</div>
                         <div><span className="text-slate-500">2. Double Negate:</span> F = {step2}</div>
                         <div><span className="text-slate-500">3. De Morgan's:</span> F = {step3}</div>
@@ -271,48 +273,60 @@ export default function App() {
                     {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
                 </button>
 
-                <div className="flex gap-4 mb-8">
+                <div className="flex flex-wrap justify-center gap-2 md:gap-4 mb-8 w-full px-2">
                     <button 
                         onClick={() => setActiveTab('kmap')}
-                        className={`px-6 py-2 rounded-md font-semibold transition-colors ${activeTab === 'kmap' ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
+                        className={`px-3 py-1.5 md:px-6 md:py-2 text-sm md:text-base rounded-md font-semibold transition-colors ${activeTab === 'kmap' ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
                     >
                         K-Map Solver
                     </button>
                     <button 
                         onClick={() => setActiveTab('binary')}
-                        className={`px-6 py-2 rounded-md font-semibold transition-colors ${activeTab === 'binary' ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
+                        className={`px-3 py-1.5 md:px-6 md:py-2 text-sm md:text-base rounded-md font-semibold transition-colors ${activeTab === 'binary' ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
                     >
                         Binary Education
                     </button>
                     <button 
                         onClick={() => setActiveTab('adder')}
-                        className={`px-6 py-2 rounded-md font-semibold transition-colors ${activeTab === 'adder' ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
+                        className={`px-3 py-1.5 md:px-6 md:py-2 text-sm md:text-base rounded-md font-semibold transition-colors ${activeTab === 'adder' ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
                     >
                         Adder Circuits
                     </button>
                     <button 
                         onClick={() => setActiveTab('pla')}
-                        className={`px-6 py-2 rounded-md font-semibold transition-colors ${activeTab === 'pla' ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
+                        className={`px-3 py-1.5 md:px-6 md:py-2 text-sm md:text-base rounded-md font-semibold transition-colors ${activeTab === 'pla' ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
                     >
                         PLA
                     </button>
                     <button 
                         onClick={() => setActiveTab('decoder')}
-                        className={`px-6 py-2 rounded-md font-semibold transition-colors ${activeTab === 'decoder' ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
+                        className={`px-3 py-1.5 md:px-6 md:py-2 text-sm md:text-base rounded-md font-semibold transition-colors ${activeTab === 'decoder' ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
                     >
                         Decoder
                     </button>
                     <button 
                         onClick={() => setActiveTab('fsm')}
-                        className={`px-6 py-2 rounded-md font-semibold transition-colors ${activeTab === 'fsm' ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
+                        className={`px-3 py-1.5 md:px-6 md:py-2 text-sm md:text-base rounded-md font-semibold transition-colors ${activeTab === 'fsm' ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
                     >
                         Finite State Machine
                     </button>
                     <button 
                         onClick={() => setActiveTab('rom')}
-                        className={`px-6 py-2 rounded-md font-semibold transition-colors ${activeTab === 'rom' ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
+                        className={`px-3 py-1.5 md:px-6 md:py-2 text-sm md:text-base rounded-md font-semibold transition-colors ${activeTab === 'rom' ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
                     >
                         ROM Circuits
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('flipflop')}
+                        className={`px-3 py-1.5 md:px-6 md:py-2 text-sm md:text-base rounded-md font-semibold transition-colors ${activeTab === 'flipflop' ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
+                    >
+                        Flip Flops
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('register')}
+                        className={`px-3 py-1.5 md:px-6 md:py-2 text-sm md:text-base rounded-md font-semibold transition-colors ${activeTab === 'register' ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'}`}
+                    >
+                        Registers
                     </button>
                 </div>
 
@@ -535,10 +549,12 @@ export default function App() {
                                 </div>
                             </div>
                         </div>
-                        <LogicCircuit 
-                            ast={circuitType === 'raw' && rawAST ? rawAST : circuitType === 'simplified' ? new BooleanParser().parse(solution.equation) : getCanonicalAST(grid, numVars, mode)} 
-                            showEquation={showCircuitEquations} 
-                        />
+                        <div className="w-full overflow-x-auto pb-4">
+                            <LogicCircuit 
+                                ast={circuitType === 'raw' && rawAST ? rawAST : circuitType === 'simplified' ? new BooleanParser().parse(solution.equation) : getCanonicalAST(grid, numVars, mode)} 
+                                showEquation={showCircuitEquations} 
+                            />
+                        </div>
                     </div>
                 )}
 
@@ -569,9 +585,11 @@ export default function App() {
                                 </button>
                             </div>
                         </div>
-                        <CMOSCircuit 
-                            ast={circuitType === 'raw' && rawAST ? rawAST : circuitType === 'simplified' ? new BooleanParser().parse(solution.equation) : getCanonicalAST(grid, numVars, mode)} 
-                        />
+                        <div className="w-full overflow-x-auto pb-4">
+                            <CMOSCircuit 
+                                ast={circuitType === 'raw' && rawAST ? rawAST : circuitType === 'simplified' ? new BooleanParser().parse(solution.equation) : getCanonicalAST(grid, numVars, mode)} 
+                            />
+                        </div>
                     </div>
                 )}
 
@@ -607,6 +625,10 @@ export default function App() {
                     <DecoderTab />
                 ) : activeTab === 'fsm' ? (
                     <FSMTab />
+                ) : activeTab === 'register' ? (
+                    <RegisterTab />
+                ) : activeTab === 'flipflop' ? (
+                    <FlipFlopGallery />
                 ) : (
                     <ROMTab />
                 )}
