@@ -1,0 +1,376 @@
+{
+    "games": [
+        {
+            "tournament": "Teen Tournament",
+            "url": "https://j-archive.com/showgame.php?game_id=6344",
+            "categories": [
+                {
+                    "name": "TAKING THE DRIVING TEST",
+                    "clues": [
+                        {
+                            "clue": "This state agency, the DMV for short, administers the test",
+                            "answer": "the Department of Motor Vehicles",
+                            "value": "$200"
+                        },
+                        {
+                            "clue": "This alliterative method to get your car alongside the curb just might be on the test",
+                            "answer": "parallel parking",
+                            "value": "$400"
+                        },
+                        {
+                            "clue": "To take the test in most states, you'll need this proof of financial responsibility in case anything goes wrong",
+                            "answer": "insurance",
+                            "value": "$600"
+                        },
+                        {
+                            "clue": "Mirrors aren't enough--look over your shoulder to check these areas before changing lanes",
+                            "answer": "blind spots",
+                            "value": "$800"
+                        },
+                        {
+                            "clue": "Failing to give this 3-word clearance to pedestrians can be an automatic failure",
+                            "answer": "right of way",
+                            "value": "$1000"
+                        }
+                    ]
+                },
+                {
+                    "name": "ART SUPPLIES...",
+                    "clues": [
+                        {
+                            "clue": "Art supplies humor, as inthistype of drawing that exaggerates certain features",
+                            "answer": "a caricature",
+                            "value": "$200"
+                        },
+                        {
+                            "clue": "...inspiration, as in \"Prince of Peace\", a vision of him by then 8-year-old Akiane Kramarik",
+                            "answer": "Jesus",
+                            "value": "$400"
+                        },
+                        {
+                            "clue": "Art supplies fashion ideas--here's what 18th-century women wore for this outdoor activity (sidesaddle, of course)",
+                            "answer": "riding",
+                            "value": "$600"
+                        },
+                        {
+                            "clue": "...a new perspective, as in \"Ma Jolie\", his 1911 portrait of his girlfriend as a heap of triangles",
+                            "answer": "Picasso",
+                            "value": "$800"
+                        },
+                        {
+                            "clue": "...history lessons, as in Benjamin West'sdepictionof a 1755 battle in this North American war",
+                            "answer": "the French and Indian War",
+                            "value": "$1000"
+                        }
+                    ]
+                },
+                {
+                    "name": "NEWER WORDS & PHRASES",
+                    "clues": [
+                        {
+                            "clue": "2-word term meaning to make an unresponsive program set you free; on a Mac it's command-option-escape",
+                            "answer": "force quit",
+                            "value": "$200"
+                        },
+                        {
+                            "clue": "Meaning overhyped, this word suggests a grilled meat sandwich without anything inside it",
+                            "answer": "a nothingburger",
+                            "value": "$400"
+                        },
+                        {
+                            "clue": "It's a less-than-chiseled paternal physique",
+                            "answer": "a dad bod",
+                            "value": "$600"
+                        },
+                        {
+                            "clue": "Double-talk way of saying something or someone is insane or beyond understanding",
+                            "answer": "cray-cray",
+                            "value": "$800"
+                        },
+                        {
+                            "clue": "A 2018 conference on computational linguistics included 4 papers on detection of this untrue stuff you read & hear",
+                            "answer": "fake news",
+                            "value": "$1000"
+                        }
+                    ]
+                },
+                {
+                    "name": "HANGOUTS",
+                    "clues": [
+                        {
+                            "clue": "Let's chill at the New York public one; it has 92 locations & more than 55 million items, including DVDs",
+                            "answer": "the library",
+                            "value": "$200"
+                        },
+                        {
+                            "clue": "Be it Bondi in Sydney or Redondo in Cali, it's always a fun day at this geographic feature",
+                            "answer": "the beach",
+                            "value": "$400"
+                        },
+                        {
+                            "clue": "Sometimes it's fun to relax at home with your pals & listen to hits like \"Natural\" & \"Believer\" by this beastly band",
+                            "answer": "Imagine Dragons",
+                            "value": "$600"
+                        },
+                        {
+                            "clue": "In the '80s, teen gamers hung in arcades to see ghosts named Blinky, Pinky, Inky & Clyde chase this guy around a maze",
+                            "answer": "Pac-Man",
+                            "value": "$800"
+                        },
+                        {
+                            "clue": "Nowadays, teen gamers hang using voice & text chat on this app with a name meaning strife or lack of harmony",
+                            "answer": "Discord",
+                            "value": "$1000"
+                        }
+                    ]
+                },
+                {
+                    "name": "FINISH THE CLASSIC AMERICAN LYRIC",
+                    "clues": [
+                        {
+                            "clue": "\"Home, home on the range, where\" these play",
+                            "answer": "the deer and the antelope",
+                            "value": "$200"
+                        },
+                        {
+                            "clue": "\"O beautiful for spacious skies...\"",
+                            "answer": "for amber waves of grain",
+                            "value": "$400"
+                        },
+                        {
+                            "clue": "\"You are my sunshine, my only sunshine, you make me happy when...\"",
+                            "answer": "skies are gray",
+                            "value": "$600"
+                        },
+                        {
+                            "clue": "\"Doe, a deer, a female deer; ray, a drop of golden sun; me...\"",
+                            "answer": "a name I call myself",
+                            "value": "$800"
+                        },
+                        {
+                            "clue": "\"Oh my darling, oh my darling, oh my darling Clementine...\"",
+                            "answer": "you are lost and gone forever, oh my darling Clementine",
+                            "value": "$1000"
+                        }
+                    ]
+                },
+                {
+                    "name": "\"P\"LACES ON THE MAP",
+                    "clues": [
+                        {
+                            "clue": "On some journeys, this artificial waterway can save ships 8,000 nautical miles",
+                            "answer": "the Panama Canal",
+                            "value": "$200"
+                        },
+                        {
+                            "clue": "There are 35-foot-tall replicas of Heinz ketchup bottles at Heinz Field in this U.S. city",
+                            "answer": "Pittsburgh",
+                            "value": "$400"
+                        },
+                        {
+                            "clue": "Lieutenant Joseph Ives gave this name to a brilliantly coloredArizona desert, now partly within Petrified Forest National Park",
+                            "answer": "the Painted Desert",
+                            "value": "$?"
+                        },
+                        {
+                            "clue": "Confederation Bridge connects New Brunswick with this Canadian province",
+                            "answer": "Prince Edward Island",
+                            "value": "$800"
+                        },
+                        {
+                            "clue": "This South African city was the capital of the Transvaal",
+                            "answer": "Pretoria",
+                            "value": "$1000"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "tournament": "Teen Tournament",
+            "url": "https://j-archive.com/showgame.php?game_id=6342",
+            "categories": [
+                {
+                    "name": "IN & AROUND THE STATE CAPITAL",
+                    "clues": [
+                        {
+                            "clue": "Chill out by Taku Glacier, southeast of downtown",
+                            "answer": "Juneau (Alaska)",
+                            "value": "$200"
+                        },
+                        {
+                            "clue": "Honestly, the Lincoln Home National Historic Site is there",
+                            "answer": "Springfield",
+                            "value": "$400"
+                        },
+                        {
+                            "clue": "Get your choir on at the Latter-Day Saints Conference Center",
+                            "answer": "Salt Lake City",
+                            "value": "$600"
+                        },
+                        {
+                            "clue": "Plant yourself at the Roger Williams Park Botanical Center",
+                            "answer": "Providence",
+                            "value": "$800"
+                        },
+                        {
+                            "clue": "Three Mile Island is a powerful nearby site to see",
+                            "answer": "Harrisburg (Pennsylvania)",
+                            "value": "$1000"
+                        }
+                    ]
+                },
+                {
+                    "name": "BUSINESS PAIRS",
+                    "clues": [
+                        {
+                            "clue": "Dave had a place with games near the restaurant of a guy with this nickname; the 2 teamed up in 1982",
+                            "answer": "Buster",
+                            "value": "$200"
+                        },
+                        {
+                            "clue": "This ice cream chain is named for brothers-in-law Burt & Irv",
+                            "answer": "Baskin-Robbins",
+                            "value": "$400"
+                        },
+                        {
+                            "clue": "Fancy British cars were born after 1904, when Charles Stewart Rolls got into business with this Henry",
+                            "answer": "Royce",
+                            "value": "$600"
+                        },
+                        {
+                            "clue": "This bookstore chain traces its roots to 1873 & a book business in Wheaton, Illinois",
+                            "answer": "Barnes and Noble",
+                            "value": "$800"
+                        },
+                        {
+                            "clue": "rootbeer.com is the website for this brand",
+                            "answer": "A&W",
+                            "value": "$1000"
+                        }
+                    ]
+                },
+                {
+                    "name": "MASKS",
+                    "clues": [
+                        {
+                            "clue": "TheMedico de la Peste maskwas originally worn in the 17th century by a doctor treating victims of this bubonic contagion",
+                            "answer": "the Black Plague",
+                            "value": "$200"
+                        },
+                        {
+                            "clue": "These 2 antonymic forms of theater are symbolically represented by masks",
+                            "answer": "comedy and tragedy",
+                            "value": "$400"
+                        },
+                        {
+                            "clue": "The \"Music Of The Night\" might surround you when you wear themaskfrom this musical",
+                            "answer": "The Phantom of the Opera",
+                            "value": "$600"
+                        },
+                        {
+                            "clue": "\"The Man in the Iron Mask\" was a mysterious unidentified prisoner held in this country in the late 1600s",
+                            "answer": "France",
+                            "value": "$800"
+                        },
+                        {
+                            "clue": "In Latin America skull-shaped masks are popular on this holiday, el Dia de Los Muertos",
+                            "answer": "the Day of the Dead",
+                            "value": "$1000"
+                        }
+                    ]
+                },
+                {
+                    "name": "ON YOUTUBE",
+                    "clues": [
+                        {
+                            "clue": "He & Jimmy Fallon covered \"The History of Rap\"",
+                            "answer": "Justin Timberlake",
+                            "value": "$200"
+                        },
+                        {
+                            "clue": "In addition toherown videos, you can also see clips of her on \"Dancing With the Stars\"",
+                            "answer": "Bethany Mota",
+                            "value": "$400"
+                        },
+                        {
+                            "clue": "The Vlogbrothers have over 3 million subscribers; one brother is this bestselling author of Y.A. novels",
+                            "answer": "John Green",
+                            "value": "$600"
+                        },
+                        {
+                            "clue": "Among the music videos spoofed on Shane Dawson's channel are One Direction's \"Story Of My Life\" & her \"Wrecking Ball\"",
+                            "answer": "Miley Cyrus",
+                            "value": "$800"
+                        },
+                        {
+                            "clue": "In 2018 the music video for this Spanish megahit sung by Luis Fonsi became the first video with over 5 billion views",
+                            "answer": "\"Despacito\"",
+                            "value": "$1000"
+                        }
+                    ]
+                },
+                {
+                    "name": "THE 1600s",
+                    "clues": [
+                        {
+                            "clue": "In 1613 the Romanov family came to power in this country & ruled until 1917",
+                            "answer": "Russia",
+                            "value": "$200"
+                        },
+                        {
+                            "clue": "Hermarriage to John Rolfe was the Virginia social event of 1614",
+                            "answer": "Pocahontas",
+                            "value": "$?"
+                        },
+                        {
+                            "clue": "Hits of the stage included Moliere's \"L'Avare\", French for this type of greedy, money-obsessed man",
+                            "answer": "a miser",
+                            "value": "$600"
+                        },
+                        {
+                            "clue": "It was founded in Massachusetts in 1636 & if you didn't get in, your college options were very limited",
+                            "answer": "Harvard",
+                            "value": "$800"
+                        },
+                        {
+                            "clue": "European settlement in South Africa began with the wreck of a Dutch ship rounding this cape in 1647",
+                            "answer": "the Cape of Good Hope",
+                            "value": "$1000"
+                        }
+                    ]
+                },
+                {
+                    "name": "THAT'S SO CLICHE",
+                    "clues": [
+                        {
+                            "clue": "I've decided to participate; I'm throwing this item \"into the ring\"",
+                            "answer": "a hat",
+                            "value": "$200"
+                        },
+                        {
+                            "clue": "Look at the size of you! You're \"growing like\" one of these normally unwelcome plants",
+                            "answer": "a weed",
+                            "value": "$400"
+                        },
+                        {
+                            "clue": "That pair is so alike, they're like these, a pair of legumes together",
+                            "answer": "peas in a pod",
+                            "value": "$600"
+                        },
+                        {
+                            "clue": "We're doing it, no matter what, \"come hell or\" this other condition",
+                            "answer": "high water",
+                            "value": "$800"
+                        },
+                        {
+                            "clue": "You can do this for exercise, or to \"your memory\"",
+                            "answer": "to jog",
+                            "value": "$1000"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
