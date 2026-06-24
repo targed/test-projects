@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teen Jeopardy</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Teen Jeopardy!</h1>
+        <div class="game-selector">
+            <label for="game-select">Select a Game: </label>
+            <select id="game-select"></select>
+        </div>
+        <div id="board" class="board"></div>
+    </div>
+
+    <!-- Modal for showing clues -->
+    <div id="clue-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="modal-category">Category</div>
+            <div id="modal-value">$200</div>
+            <div id="modal-clue" class="clue-text">Clue goes here</div>
+            <button id="show-answer-btn">Show Answer</button>
+            <div id="modal-answer" class="answer-text hidden">Answer goes here</div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
